@@ -16,6 +16,7 @@ import LoyaltyAdmin from './pages/LoyaltyAdmin'
 import SupportInbox from './pages/SupportInbox'
 import WhatsAppBot from './pages/WhatsAppBot'
 import ImportDre from './pages/ImportDre'
+import DashboardDre from './pages/DashboardDre'
 
 import MemberLayout from './components/member/MemberLayout'
 import MemberPortal from './pages/member/Portal'
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/import-dre" element={<ImportDre />} />
+          <Route path="/dashboard-dre" element={<DashboardDre />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/loyalty" element={<LoyaltyAdmin />} />

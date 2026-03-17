@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Bot,
   FileSpreadsheet,
+  PieChart,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,7 @@ const items = [
   { title: 'ALA Private', url: '/ala-private', icon: Users },
   { title: 'Faturamento', url: '/billing', icon: CreditCard },
   { title: 'Importar DRE', url: '/import-dre', icon: FileSpreadsheet },
+  { title: 'Dashboard DRE', url: '/dashboard-dre', icon: PieChart },
   { title: 'Estoque de Vinhos', url: '/inventory', icon: Package },
   { title: 'Notificações', url: '/notifications', icon: BellRing },
   { title: 'Analytics', url: '/analytics', icon: BarChart3 },
@@ -109,6 +111,7 @@ function Header() {
     '/inventory': 'Estoque de Vinhos',
     '/billing': 'Faturamento',
     '/import-dre': 'Importar DRE',
+    '/dashboard-dre': 'Dashboard DRE',
     '/notifications': 'Notificações',
     '/analytics': 'Analytics Avançado',
     '/loyalty': 'Programa de Fidelidade',

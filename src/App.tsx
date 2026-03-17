@@ -15,6 +15,7 @@ import Analytics from './pages/Analytics'
 import LoyaltyAdmin from './pages/LoyaltyAdmin'
 import SupportInbox from './pages/SupportInbox'
 import WhatsAppBot from './pages/WhatsAppBot'
+import ImportDre from './pages/ImportDre'
 
 import MemberLayout from './components/member/MemberLayout'
 import MemberPortal from './pages/member/Portal'
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/ala-private" element={<AlaPrivate />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/import-dre" element={<ImportDre />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/loyalty" element={<LoyaltyAdmin />} />

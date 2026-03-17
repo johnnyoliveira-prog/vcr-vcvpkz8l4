@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { ArrowUpRight, ArrowDownRight, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, TrendingUp, CalendarDays } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   ChartContainer,
@@ -68,16 +68,28 @@ const MONTHS = [
 const formatBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
+const getQuarterInfo = (month: string) => {
+  const q = Math.ceil(parseInt(month, 10) / 3)
+  return {
+    label: `T${q}`,
+    months: [
+      String((q - 1) * 3 + 1).padStart(2, '0'),
+      String((q - 1) * 3 + 2).padStart(2, '0'),
+      String(q * 3).padStart(2, '0'),
+    ],
+  }
+}
+
 function VarianceBadge({
   curr,
   prev,
-  inverted = false,
+  inverted,
 }: {
   curr: number
   prev: number | null
   inverted?: boolean
 }) {
-  if (!prev)
+  if (prev === null)
     return (
       <Badge
         variant="outline"
@@ -86,17 +98,14 @@ function VarianceBadge({
         Sem dados
       </Badge>
     )
-  const pct = (curr / prev - 1) * 100
-  const isPos = pct > 0
-  const isGood = inverted ? !isPos : isPos
-
+  const pct = prev === 0 ? 0 : (curr / prev - 1) * 100
   if (pct === 0)
     return (
       <Badge variant="outline" className="bg-slate-800 text-slate-400 border-slate-700">
         0.0%
       </Badge>
     )
-
+  const isGood = inverted ? pct < 0 : pct > 0
   return (
     <Badge
       variant="outline"
@@ -105,7 +114,7 @@ function VarianceBadge({
         isGood ? 'bg-emerald-500/15 text-emerald-400' : 'bg-rose-500/15 text-rose-400',
       )}
     >
-      {isPos ? (
+      {pct > 0 ? (
         <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
       ) : (
         <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
@@ -119,7 +128,7 @@ function SummaryCard({
   title,
   current,
   previous,
-  inverted = false,
+  inverted,
 }: {
   title: string
   current: number
@@ -138,13 +147,78 @@ function SummaryCard({
               {formatBRL(current)}
             </div>
             <div className="text-sm text-slate-500 mt-1">
-              vs {previous ? formatBRL(previous) : 'N/A'} (ano anterior)
+              vs {previous !== null ? formatBRL(previous) : 'N/A'} (ano anterior)
             </div>
           </div>
           <VarianceBadge curr={current} prev={previous} inverted={inverted} />
         </div>
       </CardContent>
       <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/50 to-transparent opacity-50 z-0 pointer-events-none" />
+    </Card>
+  )
+}
+
+function ComparisonChart({
+  title,
+  data,
+  config,
+  year,
+  prevYear,
+}: {
+  title: string
+  data: any[]
+  config: any
+  year: string
+  prevYear: string
+}) {
+  return (
+    <Card className="bg-slate-900/50 border-slate-800/80 shadow-2xl relative z-10 flex-1 mt-6">
+      <CardHeader>
+        <CardTitle className="font-serif text-xl text-slate-200">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={config} className="h-[350px] w-full">
+          <BarChart data={data} margin={{ top: 20, right: 0, left: 0, bottom: 0 }} barGap={8}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+            <XAxis
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 14 }}
+              dy={10}
+            />
+            <YAxis
+              tickFormatter={(val) => `R$ ${val / 1000}k`}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b' }}
+              dx={-10}
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value) => formatBRL(value as number)}
+                  labelClassName="text-slate-400 mb-2"
+                />
+              }
+              cursor={{ fill: '#1e293b', opacity: 0.4 }}
+            />
+            <ChartLegend content={<ChartLegendContent />} className="mt-4" />
+            <Bar
+              dataKey={year}
+              fill={`var(--color-${year})`}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={60}
+            />
+            <Bar
+              dataKey={prevYear}
+              fill={`var(--color-${prevYear})`}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={60}
+            />
+          </BarChart>
+        </ChartContainer>
+      </CardContent>
     </Card>
   )
 }
@@ -170,9 +244,32 @@ export default function DashboardDre() {
     [prevYear]: { label: prevYear, color: '#475569' },
   }
 
+  const { label: qLabel, months: qMonths } = getQuarterInfo(month)
+  let qCurrRev = 0,
+    qCurrExp = 0,
+    qPrevRev = 0,
+    qPrevExp = 0,
+    hasQPrev = false
+
+  const qChartData = qMonths.map((m) => {
+    const cData = MOCK_DATA[year]?.[m] || { rev: 0, exp: 0 }
+    const pData = MOCK_DATA[prevYear]?.[m] || null
+    qCurrRev += cData.rev
+    qCurrExp += cData.exp
+    if (pData) {
+      qPrevRev += pData.rev
+      qPrevExp += pData.exp
+      hasQPrev = true
+    }
+    return {
+      name: MONTHS.find((x) => x.v === m)?.l || m,
+      [year]: cData.rev - cData.exp,
+      [prevYear]: pData ? pData.rev - pData.exp : 0,
+    }
+  })
+
   return (
     <div className="-m-6 lg:-m-8 p-6 lg:p-8 bg-[#0f172a] min-h-[calc(100vh-4rem)] dark text-slate-50 flex flex-col space-y-6 animate-fade-in relative z-0">
-      {/* Header Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
         <div>
           <h1 className="text-3xl font-serif font-bold text-slate-50 flex items-center gap-2">
@@ -209,7 +306,6 @@ export default function DashboardDre() {
         </div>
       </div>
 
-      {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
         <SummaryCard
           title="Receita Total"
@@ -225,56 +321,47 @@ export default function DashboardDre() {
         <SummaryCard title="Saldo do Período" current={currBalance} previous={prevBalance} />
       </div>
 
-      {/* Chart */}
-      <Card className="bg-slate-900/50 border-slate-800/80 shadow-2xl relative z-10 flex-1">
-        <CardHeader>
-          <CardTitle className="font-serif text-xl text-slate-200">
-            Comparativo Financeiro ({MONTHS.find((m) => m.v === month)?.l})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[350px] w-full">
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 0, left: 0, bottom: 0 }}
-              barGap={8}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#94a3b8', fontSize: 14 }}
-                dy={10}
-              />
-              <YAxis
-                tickFormatter={(val) => `R$ ${val / 1000}k`}
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#64748b' }}
-                dx={-10}
-              />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value) => formatBRL(value as number)}
-                    labelClassName="text-slate-400 mb-2"
-                  />
-                }
-                cursor={{ fill: '#1e293b', opacity: 0.4 }}
-              />
-              <ChartLegend content={<ChartLegendContent />} className="mt-4" />
-              <Bar dataKey={year} fill="var(--color-2025)" radius={[4, 4, 0, 0]} maxBarSize={60} />
-              <Bar
-                dataKey={prevYear}
-                fill="var(--color-2024)"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={60}
-              />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+      <ComparisonChart
+        title={`Comparativo Financeiro (${MONTHS.find((m) => m.v === month)?.l})`}
+        data={chartData}
+        config={chartConfig}
+        year={year}
+        prevYear={prevYear}
+      />
+
+      <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
+        <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">
+          <CalendarDays className="w-6 h-6 text-blue-500" /> Comparativo Trimestral ({qLabel})
+        </h2>
+        <p className="text-slate-400 mt-1">Análise de performance do trimestre selecionado</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 mt-6">
+        <SummaryCard
+          title="Receita Total do Trimestre"
+          current={qCurrRev}
+          previous={hasQPrev ? qPrevRev : null}
+        />
+        <SummaryCard
+          title="Despesa Total do Trimestre"
+          current={qCurrExp}
+          previous={hasQPrev ? qPrevExp : null}
+          inverted
+        />
+        <SummaryCard
+          title="Saldo do Trimestre"
+          current={qCurrRev - qCurrExp}
+          previous={hasQPrev ? qPrevRev - qPrevExp : null}
+        />
+      </div>
+
+      <ComparisonChart
+        title={`Evolução do Saldo no Trimestre (${qLabel})`}
+        data={qChartData}
+        config={chartConfig}
+        year={year}
+        prevYear={prevYear}
+      />
     </div>
   )
 }

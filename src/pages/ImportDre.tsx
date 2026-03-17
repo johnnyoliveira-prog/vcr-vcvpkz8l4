@@ -10,7 +10,15 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { UploadCloud, FileSpreadsheet, Check, X, Loader2, Calendar } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { UploadCloud, FileSpreadsheet, Check, X, Loader2, Calendar, Trash2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +28,16 @@ interface DreRow {
   level: number
   revenue: number
   expense: number
+  balance: number
+}
+
+interface ImportHistoryRecord {
+  id: string
+  period: string
+  filename: string
+  importDate: string
+  totalRevenue: number
+  totalExpense: number
   balance: number
 }
 
@@ -35,14 +53,41 @@ const MOCK_RAW_DATA = [
   { code: '23.001', description: 'Rendimentos Financeiros', rev: 15000, exp: 0 },
 ]
 
+const MOCK_HISTORY: ImportHistoryRecord[] = [
+  {
+    id: '1',
+    period: '02/2025',
+    filename: 'dre_2025-02.xlsx',
+    importDate: '15/03/2025 14:30',
+    totalRevenue: 250000,
+    totalExpense: 85000,
+    balance: 165000,
+  },
+  {
+    id: '2',
+    period: '01/2025',
+    filename: 'dre_2025-01.xlsx',
+    importDate: '10/02/2025 09:15',
+    totalRevenue: 280000,
+    totalExpense: 90000,
+    balance: 190000,
+  },
+  {
+    id: '3',
+    period: '12/2024',
+    filename: 'dre_2024-12.xlsx',
+    importDate: '15/01/2025 11:45',
+    totalRevenue: 420000,
+    totalExpense: 150000,
+    balance: 270000,
+  },
+]
+
 const calculateLevel = (code: string): number => {
   const parts = code.split('.')
   if (parts.length === 1) return 1
-  if (parts.length === 2) {
-    if (parts[1].length === 3) return 2 // e.g., 23.001
-    return 3 // e.g., 1.02
-  }
-  return 4 // e.g., 1.02.001
+  if (parts.length === 2) return parts[1].length === 3 ? 2 : 3
+  return 4
 }
 
 const formatBRL = (value: number) => {
@@ -55,6 +100,10 @@ export default function ImportDre() {
   const [parsedData, setParsedData] = useState<DreRow[] | null>(null)
   const [period, setPeriod] = useState<string>('')
   const [filename, setFilename] = useState<string>('')
+
+  const [history, setHistory] = useState<ImportHistoryRecord[]>(MOCK_HISTORY)
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const processFile = (file: File) => {
@@ -68,8 +117,8 @@ export default function ImportDre() {
     }
 
     setFilename(file.name)
-    const match = file.name.match(/(\d{4}-\d{2})/)
-    setPeriod(match ? match[1] : 'Período não identificado')
+    const match = file.name.match(/(\d{4})-(\d{2})/)
+    setPeriod(match ? `${match[2]}/${match[1]}` : 'Período não identificado')
     setIsUploading(true)
 
     // Simulate parsing delay
@@ -104,6 +153,26 @@ export default function ImportDre() {
   }
 
   const handleConfirm = () => {
+    if (parsedData) {
+      const totalRevenue = parsedData
+        .filter((r) => r.level === 1)
+        .reduce((acc, row) => acc + row.revenue, 0)
+      const totalExpense = parsedData
+        .filter((r) => r.level === 1)
+        .reduce((acc, row) => acc + row.expense, 0)
+
+      const newRecord: ImportHistoryRecord = {
+        id: Math.random().toString(),
+        period: period || 'Desconhecido',
+        filename,
+        importDate: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }),
+        totalRevenue,
+        totalExpense,
+        balance: totalRevenue - totalExpense,
+      }
+      setHistory([newRecord, ...history])
+    }
+
     toast({
       title: 'Importação concluída',
       description: 'Os dados da DRE foram salvos com sucesso no sistema.',
@@ -118,6 +187,17 @@ export default function ImportDre() {
     setPeriod('')
     setFilename('')
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleDeleteConfirm = () => {
+    if (itemToDelete) {
+      setHistory(history.filter((item) => item.id !== itemToDelete))
+      toast({
+        title: 'Importação excluída',
+        description: 'O registro foi removido do histórico com sucesso.',
+      })
+      setItemToDelete(null)
+    }
   }
 
   return (
@@ -272,6 +352,97 @@ export default function ImportDre() {
           </CardContent>
         </Card>
       )}
+
+      {/* Histórico de Importações Section */}
+      <div className="mt-10 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+        <h2 className="text-2xl font-serif font-bold text-primary mb-4">
+          Histórico de Importações
+        </h2>
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-0">
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="font-semibold">Período</TableHead>
+                    <TableHead className="font-semibold">Nome do Arquivo</TableHead>
+                    <TableHead className="font-semibold">Data de Importação</TableHead>
+                    <TableHead className="font-semibold text-right">Receita Total (R$)</TableHead>
+                    <TableHead className="font-semibold text-right">Despesa Total (R$)</TableHead>
+                    <TableHead className="font-semibold text-right">Saldo (R$)</TableHead>
+                    <TableHead className="font-semibold text-center w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                        Nenhum histórico encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    history.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium text-foreground">
+                          {record.period}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{record.filename}</TableCell>
+                        <TableCell className="text-muted-foreground">{record.importDate}</TableCell>
+                        <TableCell className="text-right text-green-600 font-medium">
+                          {formatBRL(record.totalRevenue)}
+                        </TableCell>
+                        <TableCell className="text-right text-destructive font-medium">
+                          {formatBRL(record.totalExpense)}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            'text-right font-bold',
+                            record.balance >= 0 ? 'text-primary' : 'text-destructive',
+                          )}
+                        >
+                          {formatBRL(record.balance)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 transition-colors"
+                            onClick={() => setItemToDelete(record.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif text-primary">
+              Confirmar Exclusão
+            </DialogTitle>
+            <DialogDescription className="text-base mt-2">
+              Tem certeza que deseja excluir esta importação?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 sm:justify-end gap-3">
+            <Button variant="outline" onClick={() => setItemToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Confirmar Exclusão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

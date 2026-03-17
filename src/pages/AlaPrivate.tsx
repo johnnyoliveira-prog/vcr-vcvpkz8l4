@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,12 @@ const tierStyles: Record<string, string> = {
   Ouro: 'bg-secondary text-secondary-foreground border-none',
   Prata: 'bg-slate-300 text-slate-800 border-none',
   Bronze: 'bg-amber-700/20 text-amber-900 border-none',
+}
+
+const paymentStyles: Record<string, string> = {
+  Ativo: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  Pendente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  Atrasado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
 }
 
 export default function AlaPrivate() {
@@ -40,7 +46,6 @@ export default function AlaPrivate() {
             className="group hover:shadow-elevation transition-all animate-fade-in-up border-none shadow-sm relative overflow-hidden"
             style={{ animationDelay: `${i * 100}ms` }}
           >
-            {/* Subtle gradient background based on tier */}
             {member.tier === 'Reserva' && (
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10" />
             )}
@@ -61,12 +66,19 @@ export default function AlaPrivate() {
                     <h3 className="font-semibold text-lg leading-tight text-foreground">
                       {member.name}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Membro desde {member.joinedAt.split('-')[0]}
-                    </p>
+                    <div className="flex gap-2 items-center mt-1">
+                      <Badge className={`${tierStyles[member.tier]} text-[10px] px-1.5 py-0`}>
+                        {member.tier}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={`${paymentStyles[member.paymentStatus]} border-none text-[10px] px-1.5 py-0`}
+                      >
+                        {member.paymentStatus}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
-                <Badge className={tierStyles[member.tier]}>{member.tier}</Badge>
               </div>
 
               <div className="grid grid-cols-2 gap-4 my-6 p-4 bg-muted/30 rounded-lg">

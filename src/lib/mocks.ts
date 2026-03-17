@@ -59,6 +59,7 @@ export const mockMembers = [
     joinedAt: '2021-05-12',
     cellarValue: 'R$ 15.400',
     nextAllocation: 'Novembro 2023',
+    paymentStatus: 'Ativo',
   },
   {
     id: '2',
@@ -67,6 +68,7 @@ export const mockMembers = [
     joinedAt: '2022-08-03',
     cellarValue: 'R$ 8.200',
     nextAllocation: 'Dezembro 2023',
+    paymentStatus: 'Pendente',
   },
   {
     id: '3',
@@ -75,6 +77,7 @@ export const mockMembers = [
     joinedAt: '2023-01-15',
     cellarValue: 'R$ 3.500',
     nextAllocation: 'Outubro 2023',
+    paymentStatus: 'Ativo',
   },
   {
     id: '4',
@@ -83,6 +86,7 @@ export const mockMembers = [
     joinedAt: '2023-06-20',
     cellarValue: 'R$ 1.200',
     nextAllocation: 'Novembro 2023',
+    paymentStatus: 'Atrasado',
   },
   {
     id: '5',
@@ -91,6 +95,7 @@ export const mockMembers = [
     joinedAt: '2019-11-10',
     cellarValue: 'R$ 25.000',
     nextAllocation: 'Novembro 2023',
+    paymentStatus: 'Ativo',
   },
 ]
 
@@ -131,15 +136,6 @@ export const mockInventory = [
     exclusive: false,
     img: 'https://img.usecurling.com/p/200/300?q=wine%20bottle&color=purple',
   },
-  {
-    id: '5',
-    name: 'Pinot Noir Edição Limitada',
-    vintage: '2020',
-    type: 'Tinto',
-    stock: 5,
-    exclusive: true,
-    img: 'https://img.usecurling.com/p/200/300?q=premium%20wine%20bottle&color=black',
-  },
 ]
 
 export const mockChartData = [
@@ -155,4 +151,146 @@ export const mockActivities = [
   { id: '1', user: 'Roberto A.', action: 'resgatou a cota mensal', time: 'Há 2 horas' },
   { id: '2', user: 'Juliana P.', action: 'atualizou o plano para Ouro', time: 'Há 5 horas' },
   { id: '3', user: 'Carlos S.', action: 'entrou como novo lead', time: 'Ontem' },
+]
+
+export const mockBillingHistory = [
+  {
+    id: 'INV-001',
+    member: 'Roberto Almeida',
+    plan: 'Reserva',
+    amount: 'R$ 1.500',
+    date: '2023-10-05',
+    status: 'Pago',
+  },
+  {
+    id: 'INV-002',
+    member: 'Juliana Paes',
+    plan: 'Ouro',
+    amount: 'R$ 800',
+    date: '2023-10-06',
+    status: 'Pendente',
+  },
+  {
+    id: 'INV-003',
+    member: 'Fernando Costa',
+    plan: 'Prata',
+    amount: 'R$ 400',
+    date: '2023-10-07',
+    status: 'Pago',
+  },
+  {
+    id: 'INV-004',
+    member: 'Camila Rocha',
+    plan: 'Bronze',
+    amount: 'R$ 200',
+    date: '2023-10-08',
+    status: 'Atrasado',
+  },
+]
+
+export const mockPlans = [
+  {
+    id: '1',
+    name: 'Reserva',
+    price: 'R$ 1.500/mês',
+    features: [
+      'Alocação de 6 garrafas premium',
+      'Convites para eventos VIP',
+      'Frete Grátis Nacional',
+    ],
+  },
+  {
+    id: '2',
+    name: 'Ouro',
+    price: 'R$ 800/mês',
+    features: [
+      'Alocação de 4 garrafas premium',
+      'Acesso antecipado a safras',
+      'Frete Grátis Sul/Sudeste',
+    ],
+  },
+  {
+    id: '3',
+    name: 'Prata',
+    price: 'R$ 400/mês',
+    features: ['Alocação de 2 garrafas premium', '10% de desconto extra', 'Frete fixo subsidiado'],
+  },
+]
+
+export const mockNotifications = [
+  {
+    id: '1',
+    title: 'Lançamento Safra 2023',
+    audience: 'Membros Reserva',
+    sentAt: '2023-10-20',
+    status: 'Enviado',
+    opens: '85%',
+  },
+  {
+    id: '2',
+    title: 'Convite Degustação Exclusiva',
+    audience: 'Membros Ouro',
+    sentAt: '2023-10-18',
+    status: 'Enviado',
+    opens: '72%',
+  },
+  {
+    id: '3',
+    title: 'Lembrete de Pagamento',
+    audience: 'Inadimplentes',
+    sentAt: '2023-10-15',
+    status: 'Enviado',
+    opens: '40%',
+  },
+]
+
+export const mockMemberCellar = [
+  {
+    id: 'c1',
+    name: 'Casa Rosada Gran Reserva',
+    vintage: '2018',
+    type: 'Tinto',
+    quantity: 4,
+    img: 'https://img.usecurling.com/p/200/300?q=red%20wine%20bottle&color=red',
+  },
+  {
+    id: 'c2',
+    name: 'ALA Private Rosé',
+    vintage: '2022',
+    type: 'Rosé',
+    quantity: 2,
+    img: 'https://img.usecurling.com/p/200/300?q=rose%20wine%20bottle&color=pink',
+  },
+  {
+    id: 'c3',
+    name: 'Syrah de Terroir',
+    vintage: '2019',
+    type: 'Tinto',
+    quantity: 6,
+    img: 'https://img.usecurling.com/p/200/300?q=wine%20bottle&color=purple',
+  },
+]
+
+export const mockMemberOrders = [
+  {
+    id: 'PED-1042',
+    date: '2023-10-10',
+    status: 'Em Trânsito',
+    total: 'R$ 0,00 (Cota)',
+    items: '6 garrafas',
+  },
+  {
+    id: 'PED-0988',
+    date: '2023-09-10',
+    status: 'Entregue',
+    total: 'R$ 0,00 (Cota)',
+    items: '6 garrafas',
+  },
+  {
+    id: 'PED-0912',
+    date: '2023-08-25',
+    status: 'Entregue',
+    total: 'R$ 850,00',
+    items: 'Compra Avulsa: 2 garrafas',
+  },
 ]

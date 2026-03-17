@@ -1,5 +1,15 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Wine, Users, Target, Package, LayoutDashboard, Search, Bell, Menu } from 'lucide-react'
+import {
+  Wine,
+  Users,
+  Target,
+  Package,
+  LayoutDashboard,
+  Search,
+  Bell,
+  CreditCard,
+  BellRing,
+} from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +25,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
@@ -29,6 +38,8 @@ const items = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'CRM (Leads)', url: '/crm', icon: Target },
   { title: 'ALA Private', url: '/ala-private', icon: Users },
+  { title: 'Faturamento', url: '/billing', icon: CreditCard },
+  { title: 'Notificações', url: '/notifications', icon: BellRing },
   { title: 'Estoque de Vinhos', url: '/inventory', icon: Package },
 ]
 
@@ -86,6 +97,8 @@ function Header() {
     '/crm': 'CRM (Leads)',
     '/ala-private': 'ALA Private',
     '/inventory': 'Estoque de Vinhos',
+    '/billing': 'Faturamento',
+    '/notifications': 'Notificações',
   }
   const currentPathName = pathMap[location.pathname] || 'Dashboard'
 

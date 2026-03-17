@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom'
 import { OverviewCards } from '@/components/dashboard/OverviewCards'
 import { GrowthChart } from '@/components/dashboard/GrowthChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Wine } from 'lucide-react'
+import { Plus, Wine, Smartphone } from 'lucide-react'
 import { mockActivities } from '@/lib/mocks'
 
 export default function Index() {
@@ -15,7 +16,17 @@ export default function Index() {
             Bem-vindo ao centro de gestão da Casa Rosada.
           </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            asChild
+            className="w-full sm:w-auto text-secondary border-secondary/50 hover:bg-secondary/10"
+          >
+            <Link to="/member/portal">
+              <Smartphone className="w-4 h-4 mr-2" />
+              Portal do Membro (App)
+            </Link>
+          </Button>
           <Button
             variant="outline"
             className="w-full sm:w-auto text-primary border-primary/20 hover:bg-primary/5"

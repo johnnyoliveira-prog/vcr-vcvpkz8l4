@@ -2,7 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CellarTab } from '@/components/member/CellarTab'
 import { OrdersTab } from '@/components/member/OrdersTab'
 import { ProfileTab } from '@/components/member/ProfileTab'
-import { Wine, Package, User } from 'lucide-react'
+import { LoyaltyTab } from '@/components/member/LoyaltyTab'
+import { Wine, Package, User, Gift } from 'lucide-react'
 
 export default function Portal() {
   return (
@@ -17,7 +18,7 @@ export default function Portal() {
       </div>
 
       <Tabs defaultValue="cellar" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/60 p-1 rounded-xl">
+        <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/60 p-1 rounded-xl overflow-x-auto overflow-y-hidden">
           <TabsTrigger
             value="cellar"
             className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm"
@@ -33,6 +34,14 @@ export default function Portal() {
             <Package className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">Meus Pedidos</span>
             <span className="sm:hidden text-xs">Pedidos</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="loyalty"
+            className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm"
+          >
+            <Gift className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Fidelidade</span>
+            <span className="sm:hidden text-xs">Fidelidade</span>
           </TabsTrigger>
           <TabsTrigger
             value="profile"
@@ -51,6 +60,10 @@ export default function Portal() {
 
           <TabsContent value="orders" className="m-0 focus-visible:outline-none">
             <OrdersTab />
+          </TabsContent>
+
+          <TabsContent value="loyalty" className="m-0 focus-visible:outline-none">
+            <LoyaltyTab />
           </TabsContent>
 
           <TabsContent value="profile" className="m-0 focus-visible:outline-none">

@@ -147,6 +147,15 @@ export const mockChartData = [
   { month: 'Jun', members: 250, revenue: 38000 },
 ]
 
+export const mockChurnData = [
+  { month: 'Jan', rate: 2.1 },
+  { month: 'Fev', rate: 1.8 },
+  { month: 'Mar', rate: 2.4 },
+  { month: 'Abr', rate: 1.5 },
+  { month: 'Mai', rate: 1.2 },
+  { month: 'Jun', rate: 0.8 },
+]
+
 export const mockActivities = [
   { id: '1', user: 'Roberto A.', action: 'resgatou a cota mensal', time: 'Há 2 horas' },
   { id: '2', user: 'Juliana P.', action: 'atualizou o plano para Ouro', time: 'Há 5 horas' },
@@ -293,4 +302,72 @@ export const mockMemberOrders = [
     total: 'R$ 850,00',
     items: 'Compra Avulsa: 2 garrafas',
   },
+]
+
+export const mockSupportChats = [
+  {
+    id: '1',
+    user: 'Roberto Almeida',
+    lastMessage: 'Como faço para resgatar meus pontos?',
+    time: '10:42',
+    unread: true,
+    status: 'online',
+  },
+  {
+    id: '2',
+    user: 'Juliana Paes',
+    lastMessage: 'Obrigada pela ajuda!',
+    time: 'Ontem',
+    unread: false,
+    status: 'offline',
+  },
+  {
+    id: '3',
+    user: 'Carlos Santos',
+    lastMessage: 'Quando chega minha cota?',
+    time: 'Ontem',
+    unread: false,
+    status: 'offline',
+  },
+]
+
+export const mockChatMessages = [
+  {
+    id: 'm1',
+    sender: 'user',
+    text: 'Olá, gostaria de saber sobre a próxima safra.',
+    time: '10:40',
+  },
+  {
+    id: 'm2',
+    sender: 'support',
+    text: 'Olá Roberto! A próxima safra será liberada na primeira semana de Novembro.',
+    time: '10:41',
+  },
+  { id: 'm3', sender: 'user', text: 'Como faço para resgatar meus pontos?', time: '10:42' },
+]
+
+export const mockBotRules = [
+  {
+    id: '1',
+    keyword: 'Planos',
+    response: 'Temos 3 planos: Reserva, Ouro e Prata. Qual deseja conhecer?',
+  },
+  {
+    id: '2',
+    keyword: 'Horário',
+    response: 'Nosso horário de atendimento é de Seg a Sex, das 9h às 18h.',
+  },
+  {
+    id: '3',
+    keyword: 'Cota',
+    response: 'Sua cota bimestral é enviada automaticamente até o dia 10 do mês vigente.',
+  },
+]
+
+export const mockRewards = [
+  { id: '1', title: '15% Off Vinhos Reserva', points: 1000 },
+  { id: '2', title: 'Degustação Exclusiva (2 pax)', points: 1500 },
+  { id: '3', title: 'Kit 2 Taças Casa Rosada', points: 2500 },
+  { id: '4', title: 'Jantar Harmonizado na Vinícola', points: 5000 },
 ]

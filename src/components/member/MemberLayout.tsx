@@ -2,10 +2,11 @@ import { Link, Outlet } from 'react-router-dom'
 import { Wine, LogOut } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { MemberChatWidget } from './MemberChatWidget'
 
 export default function MemberLayout() {
   return (
-    <div className="min-h-screen bg-background flex flex-col font-sans">
+    <div className="min-h-screen bg-background flex flex-col font-sans relative">
       <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b bg-background/90 backdrop-blur-md px-4 sm:px-6 md:px-8">
         <Link to="/member/portal" className="flex items-center gap-2 group">
           <div className="bg-primary/10 p-1.5 rounded-md group-hover:bg-primary/20 transition-colors">
@@ -34,6 +35,8 @@ export default function MemberLayout() {
       <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-4xl mx-auto overflow-x-hidden">
         <Outlet />
       </main>
+
+      <MemberChatWidget />
     </div>
   )
 }

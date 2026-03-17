@@ -11,6 +11,10 @@ import AlaPrivate from './pages/AlaPrivate'
 import Inventory from './pages/Inventory'
 import Billing from './pages/Billing'
 import Notifications from './pages/Notifications'
+import Analytics from './pages/Analytics'
+import LoyaltyAdmin from './pages/LoyaltyAdmin'
+import SupportInbox from './pages/SupportInbox'
+import WhatsAppBot from './pages/WhatsAppBot'
 
 import MemberLayout from './components/member/MemberLayout'
 import MemberPortal from './pages/member/Portal'
@@ -28,6 +32,10 @@ const App = () => (
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/loyalty" element={<LoyaltyAdmin />} />
+          <Route path="/support" element={<SupportInbox />} />
+          <Route path="/bot" element={<WhatsAppBot />} />
         </Route>
 
         {/* Dedicated App Portal for Members */}

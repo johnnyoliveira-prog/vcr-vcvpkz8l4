@@ -9,6 +9,10 @@ import {
   Bell,
   CreditCard,
   BellRing,
+  BarChart3,
+  Gift,
+  MessageCircle,
+  Bot,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -39,8 +43,12 @@ const items = [
   { title: 'CRM (Leads)', url: '/crm', icon: Target },
   { title: 'ALA Private', url: '/ala-private', icon: Users },
   { title: 'Faturamento', url: '/billing', icon: CreditCard },
-  { title: 'Notificações', url: '/notifications', icon: BellRing },
   { title: 'Estoque de Vinhos', url: '/inventory', icon: Package },
+  { title: 'Notificações', url: '/notifications', icon: BellRing },
+  { title: 'Analytics', url: '/analytics', icon: BarChart3 },
+  { title: 'Fidelidade', url: '/loyalty', icon: Gift },
+  { title: 'Suporte', url: '/support', icon: MessageCircle },
+  { title: 'WhatsApp Bot', url: '/bot', icon: Bot },
 ]
 
 function AppSidebar() {
@@ -99,6 +107,10 @@ function Header() {
     '/inventory': 'Estoque de Vinhos',
     '/billing': 'Faturamento',
     '/notifications': 'Notificações',
+    '/analytics': 'Analytics Avançado',
+    '/loyalty': 'Programa de Fidelidade',
+    '/support': 'Inbox de Suporte',
+    '/bot': 'WhatsApp Bot',
   }
   const currentPathName = pathMap[location.pathname] || 'Dashboard'
 

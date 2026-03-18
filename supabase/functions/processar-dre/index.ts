@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-import * as XLSX from 'https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs'
+import * as XLSX from 'https://esm.sh/xlsx@0.18.5'
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {

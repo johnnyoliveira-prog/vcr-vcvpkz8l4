@@ -1,25 +1,99 @@
-import { Card, CardContent } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Search, Crown, CheckCircle2, ChevronRight } from 'lucide-react'
-import { mockMembers } from '@/lib/mocks'
-
-const tierStyles: Record<string, string> = {
-  Reserva: 'bg-primary text-primary-foreground border-none',
-  Ouro: 'bg-secondary text-secondary-foreground border-none',
-  Prata: 'bg-slate-300 text-slate-800 border-none',
-  Bronze: 'bg-amber-700/20 text-amber-900 border-none',
-}
-
-const paymentStyles: Record<string, string> = {
-  Ativo: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  Pendente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  Atrasado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-}
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Search, Crown, Plus, Edit2, Trash2, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
+import {
+  getMembers,
+  createMember,
+  updateMember,
+  deleteMember,
+  type AlaPrivateMember,
+} from '@/services/ala-private'
+import { MemberDialog, type MemberFormValues } from '@/components/ala-private/MemberDialog'
 
 export default function AlaPrivate() {
+  const [members, setMembers] = useState<AlaPrivateMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState<AlaPrivateMember | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const loadMembers = async () => {
+    try {
+      const data = await getMembers()
+      setMembers(data)
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Falha ao carregar membros.', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMembers()
+  }, [])
+
+  const handleSave = async (data: MemberFormValues) => {
+    setIsSaving(true)
+    try {
+      if (editingMember) {
+        await updateMember(editingMember.id, data)
+        toast({ title: 'Sucesso', description: 'Membro atualizado com sucesso.' })
+      } else {
+        await createMember(data)
+        toast({ title: 'Sucesso', description: 'Novo membro cadastrado.' })
+      }
+      setDialogOpen(false)
+      loadMembers()
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    try {
+      await deleteMember(deleteId)
+      toast({ title: 'Sucesso', description: 'Membro removido.' })
+      loadMembers()
+    } catch (error: any) {
+      toast({ title: 'Erro', description: 'Falha ao remover.', variant: 'destructive' })
+    } finally {
+      setDeleteId(null)
+    }
+  }
+
+  const filteredMembers = members.filter(
+    (m) =>
+      m.nome.toLowerCase().includes(search.toLowerCase()) ||
+      m.email.toLowerCase().includes(search.toLowerCase()),
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -30,86 +104,131 @@ export default function AlaPrivate() {
           </h1>
           <p className="text-muted-foreground mt-1">Gestão de membros do clube exclusivo.</p>
         </div>
+        <Button
+          onClick={() => {
+            setEditingMember(null)
+            setDialogOpen(true)
+          }}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Membro
+        </Button>
       </div>
 
       <div className="flex gap-4">
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar membro..." className="pl-9 bg-background shadow-sm" />
+          <Input
+            placeholder="Buscar por nome ou e-mail..."
+            className="pl-9 bg-background shadow-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockMembers.map((member, i) => (
-          <Card
-            key={member.id}
-            className="group hover:shadow-elevation transition-all animate-fade-in-up border-none shadow-sm relative overflow-hidden"
-            style={{ animationDelay: `${i * 100}ms` }}
-          >
-            {member.tier === 'Reserva' && (
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10" />
+      <Card className="border-none shadow-sm overflow-hidden animate-fade-in-up">
+        <Table>
+          <TableHeader className="bg-muted/30">
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>E-mail</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Data de Adesão</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+                </TableCell>
+              </TableRow>
+            ) : filteredMembers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Nenhum membro encontrado.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredMembers.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell className="font-medium">{member.nome}</TableCell>
+                  <TableCell>{member.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{member.telefone || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(member.data_adesao).toLocaleDateString('pt-BR')}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={
+                        member.status === 'Ativo'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-100 border-none'
+                          : 'bg-muted text-muted-foreground border-none'
+                      }
+                    >
+                      {member.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setEditingMember(member)
+                        setDialogOpen(true)
+                      }}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => setDeleteId(member.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
-            {member.tier === 'Ouro' && (
-              <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/10 rounded-full blur-3xl -mr-10 -mt-10" />
-            )}
+          </TableBody>
+        </Table>
+      </Card>
 
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
-                    <AvatarImage
-                      src={`https://img.usecurling.com/ppl/thumbnail?seed=${member.id}`}
-                    />
-                    <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-lg leading-tight text-foreground">
-                      {member.name}
-                    </h3>
-                    <div className="flex gap-2 items-center mt-1">
-                      <Badge className={`${tierStyles[member.tier]} text-[10px] px-1.5 py-0`}>
-                        {member.tier}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className={`${paymentStyles[member.paymentStatus]} border-none text-[10px] px-1.5 py-0`}
-                      >
-                        {member.paymentStatus}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <MemberDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        member={editingMember}
+        onSave={handleSave}
+        isLoading={isSaving}
+      />
 
-              <div className="grid grid-cols-2 gap-4 my-6 p-4 bg-muted/30 rounded-lg">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                    Valor Adega
-                  </p>
-                  <p className="font-serif font-bold text-primary">{member.cellarValue}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                    Próx. Lote
-                  </p>
-                  <p className="font-medium text-foreground text-sm flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    {member.nextAllocation}
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                className="w-full justify-between text-muted-foreground hover:text-primary hover:bg-primary/5 group/btn"
-              >
-                Ver Detalhes do Membro
-                <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O registro deste membro será removido
+              permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -35,18 +35,19 @@ const formSchema = z
     email: z.string().email('E-mail inválido'),
     telefone: z.string().optional(),
     status: z.enum(['Ativo', 'Inativo']),
-    tipo: z.enum(['Titular', 'Cônjuge', 'Filho']),
+    tipo: z.enum(['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE', 'Cônjuge', 'Filho']),
     titular_id: z.string().nullable().optional(),
   })
   .refine(
     (data) => {
-      if (data.tipo !== 'Titular' && !data.titular_id) {
+      const isPrimary = ['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE'].includes(data.tipo)
+      if (!isPrimary && !data.titular_id) {
         return false
       }
       return true
     },
     {
-      message: 'Titular vinculado é obrigatório para dependentes',
+      message: 'Membro principal vinculado é obrigatório para dependentes',
       path: ['titular_id'],
     },
   )
@@ -57,7 +58,7 @@ interface MemberDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   member?: AlaPrivateMember | null
-  titulares: AlaPrivateMember[]
+  principais: AlaPrivateMember[]
   onSave: (data: MemberFormValues) => Promise<void>
   isLoading?: boolean
 }
@@ -66,7 +67,7 @@ export function MemberDialog({
   open,
   onOpenChange,
   member,
-  titulares,
+  principais,
   onSave,
   isLoading,
 }: MemberDialogProps) {
@@ -77,7 +78,7 @@ export function MemberDialog({
       email: '',
       telefone: '',
       status: 'Ativo',
-      tipo: 'Titular',
+      tipo: 'ALA PRIVATE',
       titular_id: null,
     },
   })
@@ -98,11 +99,14 @@ export function MemberDialog({
         email: '',
         telefone: '',
         status: 'Ativo',
-        tipo: 'Titular',
+        tipo: 'ALA PRIVATE',
         titular_id: null,
       })
     }
   }, [member, form, open])
+
+  const tipoWatch = form.watch('tipo')
+  const isPrimary = ['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE'].includes(tipoWatch)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,7 +116,7 @@ export function MemberDialog({
           <DialogDescription>
             {member
               ? 'Atualize as informações do membro.'
-              : 'Preencha os dados para adicionar um novo membro ao ALA Private.'}
+              : 'Preencha os dados para adicionar um novo membro ao clube.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -126,7 +130,7 @@ export function MemberDialog({
                   <Select
                     onValueChange={(val) => {
                       field.onChange(val)
-                      if (val === 'Titular') {
+                      if (['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE'].includes(val)) {
                         form.setValue('titular_id', null, { shouldValidate: true })
                       }
                     }}
@@ -138,7 +142,11 @@ export function MemberDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="Titular">Titular</SelectItem>
+                      <SelectItem value="ALA PRIVATE">ALA PRIVATE</SelectItem>
+                      <SelectItem value="membro ALA">membro ALA</SelectItem>
+                      <SelectItem value="membro ALA PRIVATE WINE">
+                        membro ALA PRIVATE WINE
+                      </SelectItem>
                       <SelectItem value="Cônjuge">Cônjuge</SelectItem>
                       <SelectItem value="Filho">Filho</SelectItem>
                     </SelectContent>
@@ -148,28 +156,28 @@ export function MemberDialog({
               )}
             />
 
-            {form.watch('tipo') !== 'Titular' && (
+            {!isPrimary && (
               <FormField
                 control={form.control}
                 name="titular_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Titular Vinculado</FormLabel>
+                    <FormLabel>Membro Principal Vinculado</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione o titular" />
+                          <SelectValue placeholder="Selecione o membro principal" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {titulares.length === 0 ? (
+                        {principais.length === 0 ? (
                           <SelectItem value="none" disabled>
-                            Nenhum titular disponível
+                            Nenhum membro principal disponível
                           </SelectItem>
                         ) : (
-                          titulares.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.nome}
+                          principais.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.nome} ({p.tipo})
                             </SelectItem>
                           ))
                         )}

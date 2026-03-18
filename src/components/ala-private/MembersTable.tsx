@@ -9,7 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Edit2, Trash2, Loader2, Crown, Users, AlertCircle } from 'lucide-react'
+import { Edit2, Trash2, Loader2, Crown, Users, AlertCircle, Wine, Star } from 'lucide-react'
 import type { AlaPrivateMember } from '@/services/ala-private'
 
 interface MembersTableProps {
@@ -27,6 +27,22 @@ export function MembersTable({
   onDelete,
   getTitularName,
 }: MembersTableProps) {
+  const getIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'ALA PRIVATE':
+        return <Crown className="w-3.5 h-3.5 text-secondary" />
+      case 'membro ALA PRIVATE WINE':
+        return <Wine className="w-3.5 h-3.5 text-purple-500" />
+      case 'membro ALA':
+        return <Star className="w-3.5 h-3.5 text-blue-500" />
+      default:
+        return <Users className="w-3.5 h-3.5 text-muted-foreground" />
+    }
+  }
+
+  const isPrimary = (tipo: string) =>
+    ['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE'].includes(tipo)
+
   return (
     <Card className="border-none shadow-sm overflow-hidden animate-fade-in-up">
       <Table>
@@ -61,21 +77,17 @@ export function MembersTable({
                 <TableCell>
                   <div className="flex flex-col">
                     <span className="flex items-center gap-1.5 font-medium text-sm">
-                      {member.tipo === 'Titular' ? (
-                        <Crown className="w-3.5 h-3.5 text-secondary" />
-                      ) : (
-                        <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                      )}
+                      {getIcon(member.tipo)}
                       {member.tipo}
                     </span>
-                    {member.tipo !== 'Titular' && (
+                    {!isPrimary(member.tipo) && (
                       <span className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                         Vinculado a:{' '}
                         {member.titular_id ? (
                           getTitularName(member.titular_id)
                         ) : (
                           <span className="text-destructive font-semibold flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> Sem titular
+                            <AlertCircle className="w-3 h-3" /> Sem principal
                           </span>
                         )}
                       </span>

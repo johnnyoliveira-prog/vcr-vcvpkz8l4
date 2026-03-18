@@ -14,12 +14,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import type { AlaPrivateMember } from '@/services/ala-private'
 
 interface TitularFilterProps {
-  titulares: AlaPrivateMember[]
+  principais: AlaPrivateMember[]
   value: string | null
   onChange: (id: string | null) => void
 }
 
-export function TitularFilter({ titulares, value, onChange }: TitularFilterProps) {
+export function TitularFilter({ principais, value, onChange }: TitularFilterProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -30,36 +30,36 @@ export function TitularFilter({ titulares, value, onChange }: TitularFilterProps
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-[250px] justify-between bg-background shadow-sm"
+            className="w-[280px] justify-between bg-background shadow-sm"
           >
             {value
-              ? titulares.find((titular) => titular.id === value)?.nome
-              : 'Filtrar por Titular...'}
+              ? principais.find((m) => m.id === value)?.nome
+              : 'Filtro por Membro Principal...'}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[250px] p-0">
+        <PopoverContent className="w-[280px] p-0">
           <Command>
-            <CommandInput placeholder="Buscar titular..." />
+            <CommandInput placeholder="Buscar membro principal..." />
             <CommandList>
-              <CommandEmpty>Nenhum titular encontrado.</CommandEmpty>
+              <CommandEmpty>Nenhum membro principal encontrado.</CommandEmpty>
               <CommandGroup>
-                {titulares.map((titular) => (
+                {principais.map((principal) => (
                   <CommandItem
-                    key={titular.id}
-                    value={titular.nome}
+                    key={principal.id}
+                    value={principal.nome}
                     onSelect={() => {
-                      onChange(titular.id === value ? null : titular.id)
+                      onChange(principal.id === value ? null : principal.id)
                       setOpen(false)
                     }}
                   >
                     <Check
                       className={cn(
                         'mr-2 h-4 w-4',
-                        value === titular.id ? 'opacity-100' : 'opacity-0',
+                        value === principal.id ? 'opacity-100' : 'opacity-0',
                       )}
                     />
-                    {titular.nome}
+                    {principal.nome}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -70,7 +70,7 @@ export function TitularFilter({ titulares, value, onChange }: TitularFilterProps
       {value && (
         <Button variant="ghost" onClick={() => onChange(null)} className="text-muted-foreground">
           <X className="w-4 h-4 mr-2" />
-          Limpar Filtro
+          Limpar
         </Button>
       )}
     </div>

@@ -26,6 +26,9 @@ import { DashboardCards } from '@/components/ala-private/DashboardCards'
 import { MembersTable } from '@/components/ala-private/MembersTable'
 import { TitularFilter } from '@/components/ala-private/TitularFilter'
 
+const isPrimary = (tipo: string) =>
+  ['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE'].includes(tipo)
+
 export default function AlaPrivate() {
   const [members, setMembers] = useState<AlaPrivateMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -87,7 +90,7 @@ export default function AlaPrivate() {
   const filteredMembers = useMemo(() => {
     let result = members
     if (showOrphansOnly) {
-      result = result.filter((m) => m.tipo !== 'Titular' && !m.titular_id)
+      result = result.filter((m) => !isPrimary(m.tipo) && !m.titular_id)
     } else if (titularFilterId) {
       result = result.filter((m) => m.id === titularFilterId || m.titular_id === titularFilterId)
     }
@@ -106,8 +109,8 @@ export default function AlaPrivate() {
     return members.find((m) => m.id === titularId)?.nome || '-'
   }
 
-  const titulares = members.filter((m) => m.tipo === 'Titular')
-  const orphans = members.filter((m) => m.tipo !== 'Titular' && !m.titular_id)
+  const principais = members.filter((m) => isPrimary(m.tipo))
+  const orphans = members.filter((m) => !isPrimary(m.tipo) && !m.titular_id)
 
   return (
     <div className="space-y-6">
@@ -132,9 +135,10 @@ export default function AlaPrivate() {
 
       <DashboardCards
         total={members.length}
-        titulares={titulares.length}
-        conjuges={members.filter((m) => m.tipo === 'Cônjuge').length}
-        filhos={members.filter((m) => m.tipo === 'Filho').length}
+        alaPrivate={members.filter((m) => m.tipo === 'ALA PRIVATE').length}
+        membroAla={members.filter((m) => m.tipo === 'membro ALA').length}
+        membroWine={members.filter((m) => m.tipo === 'membro ALA PRIVATE WINE').length}
+        dependentes={members.filter((m) => !isPrimary(m.tipo)).length}
       />
 
       {orphans.length > 0 && !showOrphansOnly && (
@@ -142,7 +146,7 @@ export default function AlaPrivate() {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Atenção à Integridade dos Dados</AlertTitle>
           <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-2 sm:mt-0">
-            <span>Existem {orphans.length} dependentes sem um titular vinculado.</span>
+            <span>Existem {orphans.length} dependentes sem um membro principal vinculado.</span>
             <Button
               variant="outline"
               size="sm"
@@ -161,7 +165,7 @@ export default function AlaPrivate() {
       {showOrphansOnly && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-destructive/10 text-destructive px-4 py-3 rounded-md">
           <span className="font-medium text-sm">
-            Visualizando apenas dependentes com pendência de titular.
+            Visualizando apenas dependentes com pendência de membro principal.
           </span>
           <Button
             variant="ghost"
@@ -185,7 +189,7 @@ export default function AlaPrivate() {
           />
         </div>
         <TitularFilter
-          titulares={titulares}
+          principais={principais}
           value={titularFilterId}
           onChange={(id) => {
             setTitularFilterId(id)
@@ -209,7 +213,7 @@ export default function AlaPrivate() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         member={editingMember}
-        titulares={titulares.filter((t) => t.id !== editingMember?.id)}
+        principais={principais.filter((p) => p.id !== editingMember?.id)}
         onSave={handleSave}
         isLoading={isSaving}
       />

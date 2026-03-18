@@ -7,7 +7,7 @@ export interface AlaPrivateMember {
   email: string
   telefone: string | null
   status: string
-  tipo: 'Titular' | 'Cônjuge' | 'Filho'
+  tipo: 'ALA PRIVATE' | 'membro ALA' | 'membro ALA PRIVATE WINE' | 'Cônjuge' | 'Filho'
   titular_id: string | null
   data_adesao: string
   created_at: string

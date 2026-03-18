@@ -1,12 +1,12 @@
+-- Drop constraints first to allow updating the records
+ALTER TABLE public.ala_private_membros 
+DROP CONSTRAINT IF EXISTS chk_ala_private_membros_hierarquia,
+DROP CONSTRAINT IF EXISTS ala_private_membros_tipo_check;
+
 -- Update existing records to the new primary type
 UPDATE public.ala_private_membros 
 SET tipo = 'ALA PRIVATE' 
 WHERE tipo = 'Titular';
-
--- Drop constraints to recreate them
-ALTER TABLE public.ala_private_membros 
-DROP CONSTRAINT IF EXISTS chk_ala_private_membros_hierarquia,
-DROP CONSTRAINT IF EXISTS ala_private_membros_tipo_check;
 
 -- Alter column default to match the new main type
 ALTER TABLE public.ala_private_membros 
@@ -24,3 +24,4 @@ CHECK (
   (tipo IN ('ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE') AND titular_id IS NULL) OR 
   (tipo IN ('Cônjuge', 'Filho') AND titular_id IS NOT NULL)
 );
+

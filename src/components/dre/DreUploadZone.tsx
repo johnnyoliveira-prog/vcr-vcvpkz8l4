@@ -65,7 +65,10 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/processar-dre`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
         body: formData,
       })
 

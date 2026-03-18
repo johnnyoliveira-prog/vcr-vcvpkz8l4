@@ -11,11 +11,11 @@ function VarianceBadge({
   prev,
   inverted,
 }: {
-  curr: number
+  curr: number | null
   prev: number | null
   inverted?: boolean
 }) {
-  if (prev === null)
+  if (curr === null || prev === null)
     return (
       <Badge
         variant="outline"
@@ -58,7 +58,7 @@ export function SummaryCard({
   inverted,
 }: {
   title: string
-  current: number
+  current: number | null
   previous: number | null
   inverted?: boolean
 }) {
@@ -71,7 +71,7 @@ export function SummaryCard({
         <div className="flex items-end justify-between">
           <div>
             <div className="text-3xl font-serif font-bold text-slate-50 tracking-tight">
-              {formatBRL(current)}
+              {current !== null ? formatBRL(current) : 'N/A'}
             </div>
             <div className="text-sm text-slate-500 mt-1">
               vs {previous !== null ? formatBRL(previous) : 'N/A'} (ano anterior)

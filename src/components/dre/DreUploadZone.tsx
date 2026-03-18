@@ -54,16 +54,33 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
 
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        throw new Error(
+          'Erro na autorização: Sua sessão pode ter expirado. Por favor, faça login novamente.',
+        )
+      }
 
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/processar-dre`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: formData,
       })
 
       const responseData = await res.json().catch(() => ({}))
       if (!res.ok) {
+        if (
+          res.status === 401 ||
+          res.status === 403 ||
+          responseData.error === 'Unauthorized' ||
+          responseData.error === 'No authorization header'
+        ) {
+          throw new Error(
+            'Erro na autorização: Sua sessão pode ter expirado. Por favor, faça login novamente.',
+          )
+        }
         throw new Error(
           responseData.error || 'Erro ao processar o arquivo. Verifique a estrutura do Excel.',
         )

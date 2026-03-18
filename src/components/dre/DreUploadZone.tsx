@@ -17,19 +17,27 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelection = (file: File) => {
-    if (!file.name.endsWith('.xlsx')) {
+    const isExcel =
+      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.type === 'application/vnd.ms-excel' ||
+      file.name.toLowerCase().endsWith('.xlsx') ||
+      file.name.toLowerCase().endsWith('.xls')
+
+    if (!isExcel) {
       toast({
         title: 'Formato inválido',
-        description: 'Selecione um arquivo Excel (.xlsx).',
+        description:
+          'Formato de arquivo inválido. Por favor, selecione um arquivo Excel (.xlsx ou .xls).',
         variant: 'destructive',
       })
       return
     }
+
     const match = file.name.match(/(\d{4})-(\d{2})/)
     if (!match) {
       toast({
         title: 'Nome inválido',
-        description: 'O nome do arquivo deve conter o período (AAAA-MM).',
+        description: 'O nome do arquivo deve conter o período (AAAA-MM). Ex: 2024-01.xlsx',
         variant: 'destructive',
       })
       return
@@ -54,15 +62,16 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
         body: formData,
       })
 
-      const responseData = await res.json()
-      if (!res.ok) throw new Error(responseData.error || 'Erro no servidor')
-
-      const match = selectedFile.name.match(/(\d{4})-(\d{2})/)
-      const periodoStr = match ? `${match[1]}-${match[2]}` : 'Desconhecido'
+      const responseData = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          responseData.error || 'Erro ao processar o arquivo. Verifique a estrutura do Excel.',
+        )
+      }
 
       toast({
         title: 'Sucesso',
-        description: `DRE importado com sucesso! ${responseData.processed_lines} linhas processadas para o período ${periodoStr}`,
+        description: 'DRE importada com sucesso!',
       })
       setSelectedFile(null)
       onUploadSuccess()
@@ -79,13 +88,13 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
       <CardHeader>
         <CardTitle className="text-xl font-serif text-primary">Upload de Arquivo</CardTitle>
         <CardDescription>
-          Formatos suportados: .xlsx (Excel). Nome deve conter o período (AAAA-MM).
+          Formatos suportados: .xlsx, .xls (Excel). Nome deve conter o período (AAAA-MM).
         </CardDescription>
       </CardHeader>
       <CardContent>
         <input
           type="file"
-          accept=".xlsx"
+          accept=".xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
           className="hidden"
           ref={fileInputRef}
           onChange={(e) => {
@@ -113,7 +122,7 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processando...
+                    Processando DRE...
                   </>
                 ) : (
                   'Confirmar Importação'
@@ -147,7 +156,7 @@ export function DreUploadZone({ onUploadSuccess }: DreUploadZoneProps) {
               Arraste e solte sua DRE aqui
             </h3>
             <p className="text-sm text-muted-foreground mb-6">
-              ou clique para selecionar um arquivo .xlsx
+              ou clique para selecionar um arquivo Excel
             </p>
             <Button variant="secondary" className="pointer-events-none">
               Selecionar Arquivo

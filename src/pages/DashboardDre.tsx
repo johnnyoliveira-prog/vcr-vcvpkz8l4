@@ -41,6 +41,7 @@ const MONTHS = [
 ]
 
 const getQuarterInfo = (month: string) => {
+  if (!month) return { label: 'N/A', months: [] }
   const q = Math.ceil(parseInt(month, 10) / 3)
   return {
     label: `T${q}`,
@@ -56,8 +57,8 @@ const formatBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 export default function DashboardDre() {
-  const [month, setMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'))
-  const [year, setYear] = useState(String(new Date().getFullYear()))
+  const [month, setMonth] = useState<string>('')
+  const [year, setYear] = useState<string>('')
   const [uploads, setUploads] = useState<DreUpload[]>([])
   const [linhas, setLinhas] = useState<DreLinha[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,16 +68,64 @@ export default function DashboardDre() {
     getDreUploads().then((data) => {
       setUploads(data)
       setLoading(false)
+
+      if (data.length > 0) {
+        const years = Array.from(new Set(data.map((u) => String(u.ano)))).sort(
+          (a, b) => Number(b) - Number(a),
+        )
+        const latestYear = years[0]
+        const monthsInLatestYear = Array.from(
+          new Set(
+            data
+              .filter((u) => String(u.ano) === latestYear)
+              .map((u) => String(u.mes).padStart(2, '0')),
+          ),
+        ).sort((a, b) => Number(b) - Number(a))
+
+        setYear(latestYear)
+        setMonth(monthsInLatestYear[0])
+      }
     })
   }, [])
 
   useEffect(() => {
+    if (!year || !month) {
+      setLinhas([])
+      return
+    }
     setLoadingLinhas(true)
     getDreLinhas(Number(year), Number(month)).then((data) => {
       setLinhas(data)
       setLoadingLinhas(false)
     })
   }, [year, month])
+
+  const availableYears = Array.from(new Set(uploads.map((u) => String(u.ano)))).sort(
+    (a, b) => Number(b) - Number(a),
+  )
+
+  const availableMonths = year
+    ? Array.from(
+        new Set(
+          uploads.filter((u) => String(u.ano) === year).map((u) => String(u.mes).padStart(2, '0')),
+        ),
+      ).sort((a, b) => Number(a) - Number(b))
+    : []
+
+  const handleYearChange = (newYear: string) => {
+    setYear(newYear)
+    const newMonths = Array.from(
+      new Set(
+        uploads.filter((u) => String(u.ano) === newYear).map((u) => String(u.mes).padStart(2, '0')),
+      ),
+    ).sort((a, b) => Number(a) - Number(b))
+
+    if (newMonths.length > 0 && !newMonths.includes(month)) {
+      setMonth(newMonths[newMonths.length - 1])
+    } else if (newMonths.length === 0) {
+      setMonth('')
+    }
+  }
 
   const agg: Record<string, Record<string, { rev: number; exp: number }>> = {}
   uploads.forEach((u) => {
@@ -88,17 +137,20 @@ export default function DashboardDre() {
     agg[y][m].exp += Number(u.total_despesa) || 0
   })
 
-  const prevYear = String(parseInt(year) - 1)
-  const currData = agg[year]?.[month] || null
-  const prevData = agg[prevYear]?.[month] || null
+  const currData = year && month ? agg[year]?.[month] || null : null
+  const prevYear = year ? String(parseInt(year) - 1) : ''
+  const prevData = prevYear && month ? agg[prevYear]?.[month] || null : null
+
+  const chartYearKey = year || 'Atual'
+  const chartPrevYearKey = prevYear || 'Anterior'
 
   const chartData = [
-    { name: 'Receita', [year]: currData?.rev || 0, [prevYear]: prevData?.rev || 0 },
-    { name: 'Despesa', [year]: currData?.exp || 0, [prevYear]: prevData?.exp || 0 },
+    { name: 'Receita', [chartYearKey]: currData?.rev || 0, [chartPrevYearKey]: prevData?.rev || 0 },
+    { name: 'Despesa', [chartYearKey]: currData?.exp || 0, [chartPrevYearKey]: prevData?.exp || 0 },
   ]
   const chartConfig = {
-    [year]: { label: year, color: '#3b82f6' },
-    [prevYear]: { label: prevYear, color: '#475569' },
+    [chartYearKey]: { label: chartYearKey, color: '#3b82f6' },
+    [chartPrevYearKey]: { label: chartPrevYearKey, color: '#475569' },
   }
 
   const { label: qLabel, months: qMonths } = getQuarterInfo(month)
@@ -110,8 +162,8 @@ export default function DashboardDre() {
     hasQPrev = false
 
   const qChartData = qMonths.map((m) => {
-    const cData = agg[year]?.[m]
-    const pData = agg[prevYear]?.[m]
+    const cData = year ? agg[year]?.[m] : null
+    const pData = prevYear ? agg[prevYear]?.[m] : null
     if (cData) {
       qCurrRev += cData.rev
       qCurrExp += cData.exp
@@ -124,8 +176,8 @@ export default function DashboardDre() {
     }
     return {
       name: MONTHS.find((x) => x.v === m)?.l || m,
-      [year]: cData ? cData.rev - cData.exp : 0,
-      [prevYear]: pData ? pData.rev - pData.exp : 0,
+      [chartYearKey]: cData ? cData.rev - cData.exp : 0,
+      [chartPrevYearKey]: pData ? pData.rev - pData.exp : 0,
     }
   })
 
@@ -147,32 +199,32 @@ export default function DashboardDre() {
           <p className="text-slate-400 mt-1">Análise de Performance Financeira (YoY)</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
-          <Select value={month} onValueChange={setMonth}>
+          <Select value={month} onValueChange={setMonth} disabled={availableMonths.length === 0}>
             <SelectTrigger className="w-full sm:w-[140px] bg-slate-900 border-slate-700 text-slate-200">
               <SelectValue placeholder="Mês" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
-              {MONTHS.map((m) => (
-                <SelectItem key={m.v} value={m.v} className="focus:bg-slate-800">
-                  {m.l}
+              {availableMonths.map((m) => (
+                <SelectItem key={m} value={m} className="focus:bg-slate-800">
+                  {MONTHS.find((x) => x.v === m)?.l || m}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={year} onValueChange={setYear}>
+          <Select
+            value={year}
+            onValueChange={handleYearChange}
+            disabled={availableYears.length === 0}
+          >
             <SelectTrigger className="w-full sm:w-[120px] bg-slate-900 border-slate-700 text-slate-200">
               <SelectValue placeholder="Ano" />
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
-              <SelectItem
-                value={String(new Date().getFullYear() - 1)}
-                className="focus:bg-slate-800"
-              >
-                {new Date().getFullYear() - 1}
-              </SelectItem>
-              <SelectItem value={String(new Date().getFullYear())} className="focus:bg-slate-800">
-                {new Date().getFullYear()}
-              </SelectItem>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={y} className="focus:bg-slate-800">
+                  {y}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -198,11 +250,11 @@ export default function DashboardDre() {
       </div>
 
       <ComparisonChart
-        title={`Comparativo Financeiro (${MONTHS.find((m) => m.v === month)?.l})`}
+        title={`Comparativo Financeiro (${month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'})`}
         data={chartData}
         config={chartConfig}
-        year={year}
-        prevYear={prevYear}
+        year={chartYearKey}
+        prevYear={chartPrevYearKey}
       />
 
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
@@ -234,14 +286,14 @@ export default function DashboardDre() {
         title={`Evolução do Saldo no Trimestre (${qLabel})`}
         data={qChartData}
         config={chartConfig}
-        year={year}
-        prevYear={prevYear}
+        year={chartYearKey}
+        prevYear={chartPrevYearKey}
       />
 
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
         <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">
           <ListTree className="w-6 h-6 text-blue-500" /> Detalhamento DRE (
-          {MONTHS.find((m) => m.v === month)?.l}/{year})
+          {month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'}/{year || 'N/A'})
         </h2>
       </div>
 

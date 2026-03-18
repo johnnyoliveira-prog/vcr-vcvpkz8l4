@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -29,11 +29,25 @@ const formatDate = (dateString: string) => new Date(dateString).toLocaleDateStri
 
 interface DreHistoryTableProps {
   history: DreUpload[]
-  onDelete: (id: string) => void
+  onDelete: (id: string) => Promise<void>
 }
 
 export function DreHistoryTable({ history, onDelete }: DreHistoryTableProps) {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return
+    setIsDeleting(true)
+    try {
+      await onDelete(itemToDelete)
+    } catch (err) {
+      // errors handled by parent
+    } finally {
+      setIsDeleting(false)
+      setItemToDelete(null)
+    }
+  }
 
   return (
     <>
@@ -91,6 +105,7 @@ export function DreHistoryTable({ history, onDelete }: DreHistoryTableProps) {
                           size="icon"
                           className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8"
                           onClick={() => setItemToDelete(record.id)}
+                          disabled={isDeleting && itemToDelete === record.id}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -104,29 +119,26 @@ export function DreHistoryTable({ history, onDelete }: DreHistoryTableProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+      <Dialog
+        open={!!itemToDelete}
+        onOpenChange={(open) => !open && !isDeleting && setItemToDelete(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="text-xl font-serif text-primary">
               Confirmar Exclusão
             </DialogTitle>
-            <DialogDescription className="text-base mt-2">
+            <DialogDescription className="text-base mt-2 text-muted-foreground">
+              Esta ação é permanente e removerá todos os dados associados a este período específico.
               Tem certeza que deseja excluir esta importação?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6 sm:justify-end gap-3">
-            <Button variant="outline" onClick={() => setItemToDelete(null)}>
+            <Button variant="outline" onClick={() => setItemToDelete(null)} disabled={isDeleting}>
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (itemToDelete) {
-                  onDelete(itemToDelete)
-                  setItemToDelete(null)
-                }
-              }}
-            >
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+              {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Confirmar Exclusão
             </Button>
           </DialogFooter>

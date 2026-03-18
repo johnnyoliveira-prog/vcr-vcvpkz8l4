@@ -31,14 +31,15 @@ export default function ImportDre() {
   const handleDelete = async (id: string) => {
     try {
       await deleteDreUpload(id)
-      setHistory(history.filter((item) => item.id !== id))
-      toast({ title: 'Importação excluída', description: 'O registro foi removido com sucesso.' })
+      setHistory((prev) => prev.filter((item) => item.id !== id))
+      toast({ title: 'Sucesso', description: 'O registro foi removido com sucesso.' })
     } catch (e: any) {
       toast({
         title: 'Erro',
         description: 'Não foi possível excluir a importação.',
         variant: 'destructive',
       })
+      throw e
     }
   }
 

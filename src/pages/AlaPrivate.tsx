@@ -1,16 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { useState, useEffect, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Search, Crown, Plus, Edit2, Trash2, Loader2, Users } from 'lucide-react'
+import { Search, Crown, Plus, AlertCircle } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import {
   getMembers,
@@ -31,11 +22,16 @@ import {
   type AlaPrivateMember,
 } from '@/services/ala-private'
 import { MemberDialog, type MemberFormValues } from '@/components/ala-private/MemberDialog'
+import { DashboardCards } from '@/components/ala-private/DashboardCards'
+import { MembersTable } from '@/components/ala-private/MembersTable'
+import { TitularFilter } from '@/components/ala-private/TitularFilter'
 
 export default function AlaPrivate() {
   const [members, setMembers] = useState<AlaPrivateMember[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [titularFilterId, setTitularFilterId] = useState<string | null>(null)
+  const [showOrphansOnly, setShowOrphansOnly] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<AlaPrivateMember | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -88,19 +84,30 @@ export default function AlaPrivate() {
     }
   }
 
-  const filteredMembers = members.filter(
-    (m) =>
-      m.nome.toLowerCase().includes(search.toLowerCase()) ||
-      m.email.toLowerCase().includes(search.toLowerCase()),
-  )
+  const filteredMembers = useMemo(() => {
+    let result = members
+    if (showOrphansOnly) {
+      result = result.filter((m) => m.tipo !== 'Titular' && !m.titular_id)
+    } else if (titularFilterId) {
+      result = result.filter((m) => m.id === titularFilterId || m.titular_id === titularFilterId)
+    }
+    if (search) {
+      result = result.filter(
+        (m) =>
+          m.nome.toLowerCase().includes(search.toLowerCase()) ||
+          m.email.toLowerCase().includes(search.toLowerCase()),
+      )
+    }
+    return result
+  }, [members, search, titularFilterId, showOrphansOnly])
 
   const getTitularName = (titularId: string | null) => {
     if (!titularId) return '-'
-    const titular = members.find((m) => m.id === titularId)
-    return titular ? titular.nome : '-'
+    return members.find((m) => m.id === titularId)?.nome || '-'
   }
 
-  const titulares = members.filter((m) => m.tipo === 'Titular' && m.id !== editingMember?.id)
+  const titulares = members.filter((m) => m.tipo === 'Titular')
+  const orphans = members.filter((m) => m.tipo !== 'Titular' && !m.titular_id)
 
   return (
     <div className="space-y-6">
@@ -119,12 +126,55 @@ export default function AlaPrivate() {
           }}
           className="bg-primary hover:bg-primary/90"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Membro
+          <Plus className="w-4 h-4 mr-2" /> Novo Membro
         </Button>
       </div>
 
-      <div className="flex gap-4">
+      <DashboardCards
+        total={members.length}
+        titulares={titulares.length}
+        conjuges={members.filter((m) => m.tipo === 'Cônjuge').length}
+        filhos={members.filter((m) => m.tipo === 'Filho').length}
+      />
+
+      {orphans.length > 0 && !showOrphansOnly && (
+        <Alert variant="destructive" className="animate-fade-in-up">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Atenção à Integridade dos Dados</AlertTitle>
+          <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-2 sm:mt-0">
+            <span>Existem {orphans.length} dependentes sem um titular vinculado.</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setShowOrphansOnly(true)
+                setTitularFilterId(null)
+              }}
+              className="border-destructive text-destructive hover:bg-destructive hover:text-white"
+            >
+              Ver Pendências
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {showOrphansOnly && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-destructive/10 text-destructive px-4 py-3 rounded-md">
+          <span className="font-medium text-sm">
+            Visualizando apenas dependentes com pendência de titular.
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowOrphansOnly(false)}
+            className="hover:bg-destructive/20 text-destructive"
+          >
+            Limpar Filtro
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-4 mb-2">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -134,104 +184,32 @@ export default function AlaPrivate() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <TitularFilter
+          titulares={titulares}
+          value={titularFilterId}
+          onChange={(id) => {
+            setTitularFilterId(id)
+            setShowOrphansOnly(false)
+          }}
+        />
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden animate-fade-in-up">
-        <Table>
-          <TableHeader className="bg-muted/30">
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Tipo / Vínculo</TableHead>
-              <TableHead>E-mail</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Data de Adesão</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
-                </TableCell>
-              </TableRow>
-            ) : filteredMembers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Nenhum membro encontrado.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.nome}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="flex items-center gap-1.5 font-medium text-sm">
-                        {member.tipo === 'Titular' ? (
-                          <Crown className="w-3.5 h-3.5 text-secondary" />
-                        ) : (
-                          <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                        )}
-                        {member.tipo}
-                      </span>
-                      {member.tipo !== 'Titular' && (
-                        <span className="text-xs text-muted-foreground mt-0.5">
-                          Vinculado a: {getTitularName(member.titular_id)}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{member.telefone || '-'}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(member.data_adesao).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={
-                        member.status === 'Ativo'
-                          ? 'bg-green-100 text-green-800 hover:bg-green-100 border-none'
-                          : 'bg-muted text-muted-foreground border-none'
-                      }
-                    >
-                      {member.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-primary"
-                      onClick={() => {
-                        setEditingMember(member)
-                        setDialogOpen(true)
-                      }}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => setDeleteId(member.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      <MembersTable
+        members={filteredMembers}
+        loading={loading}
+        onEdit={(m) => {
+          setEditingMember(m)
+          setDialogOpen(true)
+        }}
+        onDelete={setDeleteId}
+        getTitularName={getTitularName}
+      />
 
       <MemberDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         member={editingMember}
-        titulares={titulares}
+        titulares={titulares.filter((t) => t.id !== editingMember?.id)}
         onSave={handleSave}
         isLoading={isSaving}
       />
@@ -242,7 +220,7 @@ export default function AlaPrivate() {
             <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. O registro deste membro será removido
-              permanentemente. Caso seja um membro Titular, seus dependentes também serão removidos.
+              permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

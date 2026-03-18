@@ -18,6 +18,8 @@ export type Database = {
           nome: string
           status: string
           telefone: string | null
+          tipo: string
+          titular_id: string | null
           user_id: string
         }
         Insert: {
@@ -28,6 +30,8 @@ export type Database = {
           nome: string
           status?: string
           telefone?: string | null
+          tipo?: string
+          titular_id?: string | null
           user_id: string
         }
         Update: {
@@ -38,9 +42,19 @@ export type Database = {
           nome?: string
           status?: string
           telefone?: string | null
+          tipo?: string
+          titular_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'ala_private_membros_titular_id_fkey'
+            columns: ['titular_id']
+            isOneToOne: false
+            referencedRelation: 'ala_private_membros'
+            referencedColumns: ['id']
+          },
+        ]
       }
       dre_linhas: {
         Row: {
@@ -296,6 +310,8 @@ export const Constants = {
 //   status: text (not null, default: 'Ativo'::text)
 //   data_adesao: timestamp with time zone (not null, default: now())
 //   created_at: timestamp with time zone (not null, default: now())
+//   tipo: text (not null, default: 'Titular'::text)
+//   titular_id: uuid (nullable)
 // Table: dre_linhas
 //   id: uuid (not null, default: gen_random_uuid())
 //   upload_id: uuid (not null)
@@ -327,7 +343,10 @@ export const Constants = {
 // Table: ala_private_membros
 //   PRIMARY KEY ala_private_membros_pkey: PRIMARY KEY (id)
 //   CHECK ala_private_membros_status_check: CHECK ((status = ANY (ARRAY['Ativo'::text, 'Inativo'::text])))
+//   CHECK ala_private_membros_tipo_check: CHECK ((tipo = ANY (ARRAY['Titular'::text, 'Cônjuge'::text, 'Filho'::text])))
+//   FOREIGN KEY ala_private_membros_titular_id_fkey: FOREIGN KEY (titular_id) REFERENCES ala_private_membros(id) ON DELETE CASCADE
 //   FOREIGN KEY ala_private_membros_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   CHECK chk_ala_private_membros_hierarquia: CHECK ((((tipo = 'Titular'::text) AND (titular_id IS NULL)) OR ((tipo <> 'Titular'::text) AND (titular_id IS NOT NULL))))
 // Table: dre_linhas
 //   PRIMARY KEY dre_linhas_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY dre_linhas_upload_id_fkey: FOREIGN KEY (upload_id) REFERENCES dre_uploads(id) ON DELETE CASCADE

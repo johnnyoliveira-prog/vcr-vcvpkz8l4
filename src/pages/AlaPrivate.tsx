@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Search, Crown, Plus, Edit2, Trash2, Loader2 } from 'lucide-react'
+import { Search, Crown, Plus, Edit2, Trash2, Loader2, Users } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import {
   getMembers,
@@ -94,6 +94,14 @@ export default function AlaPrivate() {
       m.email.toLowerCase().includes(search.toLowerCase()),
   )
 
+  const getTitularName = (titularId: string | null) => {
+    if (!titularId) return '-'
+    const titular = members.find((m) => m.id === titularId)
+    return titular ? titular.nome : '-'
+  }
+
+  const titulares = members.filter((m) => m.tipo === 'Titular' && m.id !== editingMember?.id)
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -133,6 +141,7 @@ export default function AlaPrivate() {
           <TableHeader className="bg-muted/30">
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Tipo / Vínculo</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>Data de Adesão</TableHead>
@@ -143,13 +152,13 @@ export default function AlaPrivate() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
                 </TableCell>
               </TableRow>
             ) : filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum membro encontrado.
                 </TableCell>
               </TableRow>
@@ -157,6 +166,23 @@ export default function AlaPrivate() {
               filteredMembers.map((member) => (
                 <TableRow key={member.id}>
                   <TableCell className="font-medium">{member.nome}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="flex items-center gap-1.5 font-medium text-sm">
+                        {member.tipo === 'Titular' ? (
+                          <Crown className="w-3.5 h-3.5 text-secondary" />
+                        ) : (
+                          <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                        {member.tipo}
+                      </span>
+                      {member.tipo !== 'Titular' && (
+                        <span className="text-xs text-muted-foreground mt-0.5">
+                          Vinculado a: {getTitularName(member.titular_id)}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{member.email}</TableCell>
                   <TableCell className="text-muted-foreground">{member.telefone || '-'}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -205,6 +231,7 @@ export default function AlaPrivate() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         member={editingMember}
+        titulares={titulares}
         onSave={handleSave}
         isLoading={isSaving}
       />
@@ -215,7 +242,7 @@ export default function AlaPrivate() {
             <AlertDialogTitle>Tem certeza absoluta?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. O registro deste membro será removido
-              permanentemente.
+              permanentemente. Caso seja um membro Titular, seus dependentes também serão removidos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

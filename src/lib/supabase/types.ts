@@ -9,6 +9,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ala_private_membros: {
+        Row: {
+          created_at: string
+          data_adesao: string
+          email: string
+          id: string
+          nome: string
+          status: string
+          telefone: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_adesao?: string
+          email: string
+          id?: string
+          nome: string
+          status?: string
+          telefone?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_adesao?: string
+          email?: string
+          id?: string
+          nome?: string
+          status?: string
+          telefone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       dre_linhas: {
         Row: {
           ano: number | null
@@ -254,6 +287,15 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: ala_private_membros
+//   id: uuid (not null, default: gen_random_uuid())
+//   user_id: uuid (not null)
+//   nome: text (not null)
+//   email: text (not null)
+//   telefone: text (nullable)
+//   status: text (not null, default: 'Ativo'::text)
+//   data_adesao: timestamp with time zone (not null, default: now())
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: dre_linhas
 //   id: uuid (not null, default: gen_random_uuid())
 //   upload_id: uuid (not null)
@@ -282,6 +324,10 @@ export const Constants = {
 //   user_id: uuid (not null)
 
 // --- CONSTRAINTS ---
+// Table: ala_private_membros
+//   PRIMARY KEY ala_private_membros_pkey: PRIMARY KEY (id)
+//   CHECK ala_private_membros_status_check: CHECK ((status = ANY (ARRAY['Ativo'::text, 'Inativo'::text])))
+//   FOREIGN KEY ala_private_membros_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 // Table: dre_linhas
 //   PRIMARY KEY dre_linhas_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY dre_linhas_upload_id_fkey: FOREIGN KEY (upload_id) REFERENCES dre_uploads(id) ON DELETE CASCADE
@@ -291,6 +337,10 @@ export const Constants = {
 //   FOREIGN KEY dre_uploads_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: ala_private_membros
+//   Policy "Users can manage their own ala_private_membros" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: (auth.uid() = user_id)
+//     WITH CHECK: (auth.uid() = user_id)
 // Table: dre_linhas
 //   Policy "Users can manage their own dre_linhas" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: (auth.uid() = user_id)
@@ -301,6 +351,8 @@ export const Constants = {
 //     WITH CHECK: (auth.uid() = user_id)
 
 // --- INDEXES ---
+// Table: ala_private_membros
+//   CREATE INDEX idx_ala_private_membros_user_id ON public.ala_private_membros USING btree (user_id)
 // Table: dre_linhas
 //   CREATE INDEX idx_dre_linhas_upload_id ON public.dre_linhas USING btree (upload_id)
 //   CREATE INDEX idx_dre_linhas_user_id ON public.dre_linhas USING btree (user_id)

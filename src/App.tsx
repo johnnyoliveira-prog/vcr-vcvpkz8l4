@@ -3,6 +3,9 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
+import { AuthProvider } from './hooks/use-auth'
+import AuthGuard from './components/AuthGuard'
+
 import Layout from './components/Layout'
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
@@ -22,35 +25,39 @@ import MemberLayout from './components/member/MemberLayout'
 import MemberPortal from './pages/member/Portal'
 
 const App = () => (
-  <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Index />} />
-          <Route path="/crm" element={<Crm />} />
-          <Route path="/ala-private" element={<AlaPrivate />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/import-dre" element={<ImportDre />} />
-          <Route path="/dashboard-dre" element={<DashboardDre />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/loyalty" element={<LoyaltyAdmin />} />
-          <Route path="/support" element={<SupportInbox />} />
-          <Route path="/bot" element={<WhatsAppBot />} />
-        </Route>
+  <AuthProvider>
+    <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Routes>
+          <Route element={<AuthGuard />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/crm" element={<Crm />} />
+              <Route path="/ala-private" element={<AlaPrivate />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/billing" element={<Billing />} />
+              <Route path="/import-dre" element={<ImportDre />} />
+              <Route path="/dashboard-dre" element={<DashboardDre />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/loyalty" element={<LoyaltyAdmin />} />
+              <Route path="/support" element={<SupportInbox />} />
+              <Route path="/bot" element={<WhatsAppBot />} />
+            </Route>
 
-        {/* Dedicated App Portal for Members */}
-        <Route element={<MemberLayout />}>
-          <Route path="/member/portal" element={<MemberPortal />} />
-        </Route>
+            {/* Dedicated App Portal for Members */}
+            <Route element={<MemberLayout />}>
+              <Route path="/member/portal" element={<MemberPortal />} />
+            </Route>
+          </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </TooltipProvider>
-  </BrowserRouter>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </TooltipProvider>
+    </BrowserRouter>
+  </AuthProvider>
 )
 
 export default App

@@ -6,9 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TrendingUp, ListTree, Loader2 } from 'lucide-react'
-import { SummaryCard } from '@/components/dre/SummaryCard'
+import { TrendingUp, ListTree, Loader2, DollarSign, Activity, PieChart, Target } from 'lucide-react'
 import { WaterfallChart } from '@/components/dre/WaterfallChart'
+import { KpiCard } from '@/components/dre/KpiCard'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
 import {
@@ -114,26 +114,21 @@ export default function DashboardDre() {
     }
   }
 
-  const agg: Record<string, Record<string, { rev: number; exp: number }>> = {}
-  uploads.forEach((u) => {
-    const y = String(u.ano)
-    const m = String(u.mes).padStart(2, '0')
-    if (!agg[y]) agg[y] = {}
-    if (!agg[y][m]) agg[y][m] = { rev: 0, exp: 0 }
-    agg[y][m].rev += Number(u.total_receita) || 0
-    agg[y][m].exp += Number(u.total_despesa) || 0
-  })
+  const currUpload = useMemo(() => {
+    if (!year || !month) return null
+    return uploads.find((u) => String(u.ano) === year && String(u.mes).padStart(2, '0') === month)
+  }, [uploads, year, month])
 
-  const currData = year && month ? agg[year]?.[month] || null : null
-  const prevYear = year ? String(parseInt(year) - 1) : ''
-  const prevData = prevYear && month ? agg[prevYear]?.[month] || null : null
+  const kpiData = useMemo(() => {
+    if (!currUpload) return null
+    const receita = Number(currUpload.total_receita) || 0
+    const despesa = Number(currUpload.total_despesa) || 0
+    const saldo = Number(currUpload.saldo) || receita - despesa
+    const cobertura = despesa > 0 ? receita / despesa : 0
+    return { receita, despesa, saldo, cobertura }
+  }, [currUpload])
 
   const waterfallData = useMemo(() => {
-    if (!year || !month) return []
-
-    const currUpload = uploads.find(
-      (u) => String(u.ano) === year && String(u.mes).padStart(2, '0') === month,
-    )
     if (!currUpload) return []
 
     const recTotal = Number(currUpload.total_receita) || 0
@@ -205,7 +200,7 @@ export default function DashboardDre() {
         fill: y3 >= 0 ? '#3b82f6' : '#ef4444', // blue-500 or red-500
       },
     ]
-  }, [year, month, uploads, linhas])
+  }, [currUpload, linhas])
 
   if (loading) {
     return (
@@ -222,7 +217,7 @@ export default function DashboardDre() {
           <h1 className="text-3xl font-serif font-bold text-slate-50 flex items-center gap-2">
             <TrendingUp className="w-8 h-8 text-blue-500" /> Dashboard DRE
           </h1>
-          <p className="text-slate-400 mt-1">Análise de Performance Financeira (YoY)</p>
+          <p className="text-slate-400 mt-1">Análise de Performance Financeira</p>
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
           <Select value={month} onValueChange={setMonth} disabled={availableMonths.length === 0}>
@@ -256,29 +251,41 @@ export default function DashboardDre() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-        <SummaryCard
-          title="Receita Total"
-          current={currData ? currData.rev : null}
-          previous={prevData ? prevData.rev : null}
-        />
-        <SummaryCard
-          title="Despesa Total"
-          current={currData ? currData.exp : null}
-          previous={prevData ? prevData.exp : null}
-          inverted
-        />
-        <SummaryCard
-          title="Saldo do Período"
-          current={currData ? currData.rev - currData.exp : null}
-          previous={prevData ? prevData.rev - prevData.exp : null}
-        />
-      </div>
-
       <WaterfallChart
         title={`Fluxo de Caixa (${month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'} ${year || 'N/A'})`}
         data={waterfallData}
       />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 relative z-10">
+        <KpiCard
+          title="Receita Total"
+          value={kpiData ? formatBRL(kpiData.receita) : 'N/A'}
+          description="Montante bruto apurado no período"
+          icon={DollarSign}
+          valueColor="text-emerald-400"
+        />
+        <KpiCard
+          title="Despesa Total"
+          value={kpiData ? formatBRL(kpiData.despesa) : 'N/A'}
+          description="Soma de todas as saídas no período"
+          icon={Activity}
+          valueColor="text-rose-400"
+        />
+        <KpiCard
+          title="Saldo do Período"
+          value={kpiData ? formatBRL(kpiData.saldo) : 'N/A'}
+          description="Resultado líquido final (Receita - Despesas)"
+          icon={PieChart}
+          valueColor={kpiData && kpiData.saldo >= 0 ? 'text-blue-400' : 'text-rose-500'}
+        />
+        <KpiCard
+          title="Índice de Cobertura"
+          value={kpiData ? `${kpiData.cobertura.toFixed(2)}x` : 'N/A'}
+          description="Eficiência operacional (Receita / Despesa)"
+          icon={Target}
+          valueColor="text-purple-400"
+        />
+      </div>
 
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
         <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">

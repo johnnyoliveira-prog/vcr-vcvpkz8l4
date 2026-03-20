@@ -6,12 +6,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TrendingUp, ListTree, Loader2, DollarSign, Activity, PieChart, Target } from 'lucide-react'
+import {
+  TrendingUp,
+  ListTree,
+  Loader2,
+  DollarSign,
+  Activity,
+  PieChart,
+  CalendarDays,
+} from 'lucide-react'
 import { WaterfallChart } from '@/components/dre/WaterfallChart'
 import { KpiCard } from '@/components/dre/KpiCard'
 import { RevenueExpenseChart } from '@/components/dre/RevenueExpenseChart'
 import { DistributionHeatmap } from '@/components/dre/DistributionHeatmap'
 import { ComboChart } from '@/components/dre/ComboChart'
+import { ExpenseCompositionChart } from '@/components/dre/ExpenseCompositionChart'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
 import {
@@ -130,6 +139,60 @@ export default function DashboardDre() {
     const cobertura = despesa > 0 ? receita / despesa : 0
     return { receita, despesa, saldo, cobertura }
   }, [currUpload])
+
+  const expenseCompositionData = useMemo(() => {
+    if (!currUpload) return []
+    const despTotal = Number(currUpload.total_despesa) || 0
+    if (despTotal === 0) return []
+
+    let despFinVal = 0
+    let despOpVal = 0
+
+    if (linhas.length > 0) {
+      const findMaxDespesa = (keyword: string) => {
+        const matches = linhas.filter(
+          (l) =>
+            l.descricao?.toLowerCase().includes(keyword.toLowerCase()) && Number(l.despesa) > 0,
+        )
+        if (matches.length === 0) return 0
+        return Math.max(...matches.map((m) => Number(m.despesa) || 0))
+      }
+      despFinVal = findMaxDespesa('financeir')
+      despOpVal = findMaxDespesa('operaciona')
+
+      if (despFinVal + despOpVal > despTotal) {
+        const scale = despTotal / (despFinVal + despOpVal)
+        despFinVal *= scale
+        despOpVal *= scale
+      }
+    } else {
+      despFinVal = despTotal * 0.15
+      despOpVal = despTotal * 0.45
+    }
+
+    const despGerVal = Math.max(0, despTotal - despFinVal - despOpVal)
+
+    return [
+      {
+        name: 'Financeiras',
+        value: despFinVal,
+        percent: (despFinVal / despTotal) * 100,
+        fill: '#f59e0b', // amber-500
+      },
+      {
+        name: 'Gerais',
+        value: despGerVal,
+        percent: (despGerVal / despTotal) * 100,
+        fill: '#8b5cf6', // violet-500
+      },
+      {
+        name: 'Operacionais',
+        value: despOpVal,
+        percent: (despOpVal / despTotal) * 100,
+        fill: '#ec4899', // pink-500
+      },
+    ]
+  }, [currUpload, linhas])
 
   const yearlyData = useMemo(() => {
     if (!year) return []
@@ -384,38 +447,42 @@ export default function DashboardDre() {
         </div>
       </div>
 
-      <WaterfallChart title={`Fluxo de Caixa (${currentPeriodLabel})`} data={waterfallData} />
+      <div className="mt-8 relative z-10 bg-slate-900/40 p-6 rounded-xl border border-slate-800/80 shadow-lg">
+        <h2 className="text-xl font-serif font-bold text-slate-50 mb-6 flex items-center gap-2">
+          <CalendarDays className="w-6 h-6 text-blue-500" /> Análise do Mês Selecionado (
+          {currentPeriodLabel})
+        </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 relative z-10">
-        <KpiCard
-          title="Receita Total"
-          value={kpiData ? formatBRL(kpiData.receita) : 'N/A'}
-          description="Montante bruto apurado no período"
-          icon={DollarSign}
-          valueColor="text-emerald-400"
-        />
-        <KpiCard
-          title="Despesa Total"
-          value={kpiData ? formatBRL(kpiData.despesa) : 'N/A'}
-          description="Soma de todas as saídas no período"
-          icon={Activity}
-          valueColor="text-rose-400"
-        />
-        <KpiCard
-          title="Saldo do Período"
-          value={kpiData ? formatBRL(kpiData.saldo) : 'N/A'}
-          description="Resultado líquido final (Receita - Despesas)"
-          icon={PieChart}
-          valueColor={kpiData && kpiData.saldo >= 0 ? 'text-blue-400' : 'text-rose-500'}
-        />
-        <KpiCard
-          title="Índice de Cobertura"
-          value={kpiData ? `${kpiData.cobertura.toFixed(2)}x` : 'N/A'}
-          description="Eficiência operacional (Receita / Despesa)"
-          icon={Target}
-          valueColor="text-purple-400"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <KpiCard
+            title="Receita Total do Mês"
+            value={kpiData ? formatBRL(kpiData.receita) : 'N/A'}
+            description="Entradas brutas apuradas no período"
+            icon={DollarSign}
+            valueColor="text-emerald-400"
+          />
+          <KpiCard
+            title="Despesa Total do Mês"
+            value={kpiData ? formatBRL(kpiData.despesa) : 'N/A'}
+            description="Custos e gastos consolidados"
+            icon={Activity}
+            valueColor="text-rose-400"
+          />
+          <KpiCard
+            title="Saldo do Mês"
+            value={kpiData ? formatBRL(kpiData.saldo) : 'N/A'}
+            description="Resultado líquido final apurado"
+            icon={PieChart}
+            valueColor={kpiData && kpiData.saldo >= 0 ? 'text-blue-400' : 'text-rose-500'}
+          />
+        </div>
+
+        {expenseCompositionData.length > 0 && (
+          <ExpenseCompositionChart data={expenseCompositionData} />
+        )}
       </div>
+
+      <WaterfallChart title={`Fluxo de Caixa (${currentPeriodLabel})`} data={waterfallData} />
 
       {yearlyData.length > 0 && <RevenueExpenseChart data={yearlyData} year={year} />}
 

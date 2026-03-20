@@ -9,6 +9,7 @@ import {
 import { TrendingUp, ListTree, Loader2, DollarSign, Activity, PieChart, Target } from 'lucide-react'
 import { WaterfallChart } from '@/components/dre/WaterfallChart'
 import { KpiCard } from '@/components/dre/KpiCard'
+import { RevenueExpenseChart } from '@/components/dre/RevenueExpenseChart'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
 import {
@@ -127,6 +128,34 @@ export default function DashboardDre() {
     const cobertura = despesa > 0 ? receita / despesa : 0
     return { receita, despesa, saldo, cobertura }
   }, [currUpload])
+
+  const yearlyData = useMemo(() => {
+    if (!year) return []
+    const yearUploads = uploads.filter((u) => String(u.ano) === year)
+
+    const grouped = yearUploads.reduce(
+      (acc, curr) => {
+        const m = Number(curr.mes)
+        if (!acc[m]) {
+          acc[m] = { receita: 0, despesa: 0 }
+        }
+        acc[m].receita += Number(curr.total_receita) || 0
+        acc[m].despesa += Number(curr.total_despesa) || 0
+        return acc
+      },
+      {} as Record<number, { receita: number; despesa: number }>,
+    )
+
+    const sortedMonths = Object.keys(grouped)
+      .map(Number)
+      .sort((a, b) => a - b)
+
+    return sortedMonths.map((m) => ({
+      month: MONTHS.find((x) => Number(x.v) === m)?.l || String(m),
+      receita: grouped[m].receita,
+      despesa: grouped[m].despesa,
+    }))
+  }, [uploads, year])
 
   const waterfallData = useMemo(() => {
     if (!currUpload) return []
@@ -286,6 +315,8 @@ export default function DashboardDre() {
           valueColor="text-purple-400"
         />
       </div>
+
+      {yearlyData.length > 0 && <RevenueExpenseChart data={yearlyData} year={year} />}
 
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
         <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">

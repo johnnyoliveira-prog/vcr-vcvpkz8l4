@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 const formatBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
-interface WaterfallData {
+export interface WaterfallData {
   name: string
+  fullName?: string
   range: [number, number]
   value: number
   isTotal?: boolean
@@ -21,15 +22,20 @@ export function WaterfallChart({ data, title }: { data: WaterfallData[]; title: 
         <CardTitle className="font-serif text-xl text-slate-200">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={{}} className="h-[400px] w-full">
-          <BarChart data={data} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+        <ChartContainer config={{}} className="h-[450px] w-full">
+          <BarChart data={data} margin={{ top: 20, right: 20, left: 20, bottom: 40 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94a3b8', fontSize: 13 }}
-              dy={10}
+              tick={{ fill: '#94a3b8', fontSize: 11 }}
+              dy={15}
+              dx={-5}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={80}
             />
             <YAxis
               tickFormatter={(val) => `R$ ${val / 1000}k`}
@@ -42,18 +48,18 @@ export function WaterfallChart({ data, title }: { data: WaterfallData[]; title: 
               cursor={{ fill: '#1e293b', opacity: 0.4 }}
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
-                  const data = payload[0].payload as WaterfallData
+                  const item = payload[0].payload as WaterfallData
                   return (
                     <div className="bg-slate-800 border border-slate-700 p-3 rounded-lg shadow-xl min-w-[150px]">
-                      <p className="text-slate-400 text-sm mb-1">{data.name}</p>
+                      <p className="text-slate-400 text-sm mb-1">{item.fullName || item.name}</p>
                       <p
                         className={cn(
                           'text-lg font-bold font-mono',
-                          data.value >= 0 ? 'text-emerald-400' : 'text-rose-400',
+                          item.value >= 0 ? 'text-emerald-400' : 'text-rose-400',
                         )}
                       >
-                        {data.value > 0 && !data.isTotal ? '+' : ''}
-                        {formatBRL(data.value)}
+                        {item.value > 0 && !item.isTotal ? '+' : ''}
+                        {formatBRL(item.value)}
                       </p>
                     </div>
                   )
@@ -61,7 +67,7 @@ export function WaterfallChart({ data, title }: { data: WaterfallData[]; title: 
                 return null
               }}
             />
-            <Bar dataKey="range" radius={[4, 4, 4, 4]} maxBarSize={80}>
+            <Bar dataKey="range" radius={[4, 4, 4, 4]} maxBarSize={60}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.fill} />
               ))}

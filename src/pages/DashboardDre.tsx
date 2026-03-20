@@ -122,107 +122,10 @@ export default function DashboardDre() {
     return uploads.find((u) => String(u.ano) === year && String(u.mes).padStart(2, '0') === month)
   }, [uploads, year, month])
 
-  const categorizedValues = useMemo(() => {
-    if (!currUpload) return null
+  const detailedExpenses = useMemo(() => {
+    if (!currUpload || linhas.length === 0) return null
 
-    let recTotal = Number(currUpload.total_receita) || 0
     let despTotal = Number(currUpload.total_despesa) || 0
-
-    if (linhas.length === 0) {
-      return {
-        recTotal,
-        despTotal,
-        despFin: despTotal * 0.15,
-        despOp: despTotal * 0.45,
-        despGer: despTotal * 0.4,
-        recFin: recTotal * 0.05,
-      }
-    }
-
-    const findVal = (type: 'despesa' | 'receita', kws: string[]) => {
-      const matches = linhas.filter(
-        (l) => kws.some((k) => l.descricao?.toLowerCase().includes(k)) && Number(l[type]) > 0,
-      )
-      return matches.length ? Math.max(...matches.map((m) => Number(m[type]) || 0)) : 0
-    }
-
-    let df = findVal('despesa', [
-      'financeir',
-      'bancár',
-      'juros',
-      'tarifa',
-      'iof',
-      'multa',
-      'encargo',
-    ])
-    let dop = findVal('despesa', [
-      'operaciona',
-      'venda',
-      'comercia',
-      'custo',
-      'cmv',
-      'cpv',
-      'csv',
-      'logística',
-      'frete',
-      'imposto',
-      'produção',
-    ])
-    let dg = findVal('despesa', [
-      'geral',
-      'gerais',
-      'administrativ',
-      'adm',
-      'pessoal',
-      'ocupação',
-      'honorário',
-      'manutenção',
-      'despesas diversas',
-    ])
-
-    const sum = df + dop + dg
-
-    if (despTotal > 0) {
-      if (sum > despTotal) {
-        const scale = despTotal / sum
-        df *= scale
-        dop *= scale
-        dg *= scale
-      } else if (sum < despTotal) {
-        const diff = despTotal - sum
-        dg += diff // Adiciona a diferença em Gerais (catch-all)
-      }
-    } else if (sum > 0) {
-      despTotal = sum
-    }
-
-    const rf = findVal('receita', ['financeir', 'juros', 'rendimento', 'aplicação', 'desconto'])
-
-    if (recTotal === 0 && rf > 0) {
-      recTotal = rf
-    }
-
-    return {
-      recTotal,
-      despTotal,
-      despFin: df,
-      despOp: dop,
-      despGer: dg,
-      recFin: rf,
-    }
-  }, [currUpload, linhas])
-
-  const kpiData = useMemo(() => {
-    if (!currUpload || !categorizedValues) return null
-    const receita = categorizedValues.recTotal
-    const despesa = categorizedValues.despTotal
-    const saldo = Number(currUpload.saldo) || receita - despesa
-    const cobertura = despesa > 0 ? receita / despesa : 0
-    return { receita, despesa, saldo, cobertura }
-  }, [currUpload, categorizedValues])
-
-  const expenseCompositionData = useMemo(() => {
-    if (!currUpload || linhas.length === 0) return []
 
     const findDetailedVal = (kws: string[]) => {
       const matches = linhas.filter(
@@ -230,8 +133,6 @@ export default function DashboardDre() {
       )
       if (!matches.length) return 0
 
-      // Encontrar apenas os registros que não possuem "filhos" entre os matches,
-      // para evitar somar o valor sintético do grupo junto com o detalhado.
       const roots = matches.filter((m) => {
         if (!m.codigo) return true
         const hasParentInMatches = matches.some(
@@ -246,189 +147,264 @@ export default function DashboardDre() {
       return roots.reduce((acc, curr) => acc + (Number(curr.despesa) || 0), 0)
     }
 
+    const raw = {
+      pessoal: findDetailedVal([
+        'pessoal',
+        'salário',
+        'salario',
+        'férias',
+        'ferias',
+        '13º',
+        'décimo terceiro',
+        'encargo',
+        'pró-labore',
+        'pro labore',
+        'benefício',
+        'fgts',
+        'inss',
+      ]),
+      financeira: findDetailedVal(['financeir', 'bancár', 'juros', 'tarifa', 'iof', 'multa']),
+      gerais: findDetailedVal([
+        'geral',
+        'gerais',
+        'administrativ',
+        'adm',
+        'ocupação',
+        'honorário',
+        'manutenção',
+        'água',
+        'luz',
+        'telefone',
+        'aluguel',
+        'energia',
+        'internet',
+      ]),
+      impostos: findDetailedVal([
+        'imposto',
+        'tributo',
+        'taxa',
+        'das',
+        'simples',
+        'icms',
+        'iss',
+        'pis',
+        'cofins',
+        'irpj',
+        'csll',
+      ]),
+      maoDeObra: findDetailedVal(['mão de obra', 'mao de obra', 'terceirizad']),
+      insumos: findDetailedVal([
+        'insumo',
+        'matéria-prima',
+        'materia-prima',
+        'embalagem',
+        'rótulo',
+        'rotulo',
+        'rolha',
+        'garrafa',
+        'levedura',
+        'barrica',
+        'caixa',
+      ]),
+      operacao: findDetailedVal([
+        'prestação de serviço',
+        'prestacao de servico',
+        'serviços prestados',
+        'servicos prestados',
+        'operação',
+        'operacao',
+        'logística',
+        'frete',
+      ]),
+      ferramentas: findDetailedVal(['ferramenta', 'utensílio', 'utensilio', 'equipamento', 'peça']),
+      publicidade: findDetailedVal([
+        'publicidade',
+        'marketing',
+        'propaganda',
+        'anúncio',
+        'anuncio',
+        'evento',
+        'comercial',
+        'rede social',
+        'patrocínio',
+      ]),
+    }
+
+    const sum = Object.values(raw).reduce((a, b) => a + b, 0)
+
+    if (despTotal > 0) {
+      if (sum > despTotal) {
+        const scale = despTotal / sum
+        for (const key in raw) {
+          raw[key as keyof typeof raw] *= scale
+        }
+      } else if (sum < despTotal) {
+        raw.gerais += despTotal - sum
+      }
+    } else if (sum > 0) {
+      despTotal = sum
+    }
+
+    return {
+      ...raw,
+      totalScaled: despTotal,
+    }
+  }, [currUpload, linhas])
+
+  const categorizedValues = useMemo(() => {
+    if (!currUpload) return null
+
+    let recTotal = Number(currUpload.total_receita) || 0
+    const despTotal = detailedExpenses
+      ? detailedExpenses.totalScaled
+      : Number(currUpload.total_despesa) || 0
+
+    if (!detailedExpenses) {
+      return {
+        recTotal,
+        despTotal,
+        despFin: despTotal * 0.15,
+        despOp: despTotal * 0.45,
+        despGer: despTotal * 0.4,
+        recFin: recTotal * 0.05,
+      }
+    }
+
+    const rf =
+      linhas.length > 0
+        ? (() => {
+            const matches = linhas.filter(
+              (l) =>
+                ['financeir', 'juros', 'rendimento', 'aplicação', 'desconto'].some((k) =>
+                  l.descricao?.toLowerCase().includes(k),
+                ) && Number(l.receita) > 0,
+            )
+            return matches.length ? Math.max(...matches.map((m) => Number(m.receita) || 0)) : 0
+          })()
+        : recTotal * 0.05
+
+    if (recTotal === 0 && rf > 0) {
+      recTotal = rf
+    }
+
+    return {
+      recTotal,
+      despTotal,
+      despFin: detailedExpenses.financeira,
+      despGer: detailedExpenses.gerais,
+      despOp:
+        detailedExpenses.pessoal +
+        detailedExpenses.impostos +
+        detailedExpenses.maoDeObra +
+        detailedExpenses.insumos +
+        detailedExpenses.operacao +
+        detailedExpenses.ferramentas +
+        detailedExpenses.publicidade,
+      recFin: rf,
+    }
+  }, [currUpload, linhas, detailedExpenses])
+
+  const kpiData = useMemo(() => {
+    if (!currUpload || !categorizedValues) return null
+    const receita = categorizedValues.recTotal
+    const despesa = categorizedValues.despTotal
+    const saldo = Number(currUpload.saldo) || receita - despesa
+    const cobertura = despesa > 0 ? receita / despesa : 0
+    return { receita, despesa, saldo, cobertura }
+  }, [currUpload, categorizedValues])
+
+  const expenseCompositionData = useMemo(() => {
+    if (!detailedExpenses) return []
+
     const categories = [
-      {
-        name: 'Despesas com Pessoal',
-        kws: [
-          'pessoal',
-          'salário',
-          'salario',
-          'férias',
-          'ferias',
-          '13º',
-          'décimo terceiro',
-          'encargo',
-          'pró-labore',
-          'pro labore',
-          'benefício',
-          'fgts',
-          'inss',
-        ],
-        fill: '#3b82f6', // blue-500
-      },
-      {
-        name: 'Despesas Financeiras',
-        kws: ['financeir', 'bancár', 'juros', 'tarifa', 'iof', 'multa'],
-        fill: '#f59e0b', // amber-500
-      },
-      {
-        name: 'Despesas/Custos Gerais',
-        kws: [
-          'geral',
-          'gerais',
-          'administrativ',
-          'adm',
-          'ocupação',
-          'honorário',
-          'manutenção',
-          'água',
-          'luz',
-          'telefone',
-          'aluguel',
-          'energia',
-          'internet',
-        ],
-        fill: '#8b5cf6', // violet-500
-      },
-      {
-        name: 'Impostos e Tributos',
-        kws: [
-          'imposto',
-          'tributo',
-          'taxa',
-          'das',
-          'simples',
-          'icms',
-          'iss',
-          'pis',
-          'cofins',
-          'irpj',
-          'csll',
-        ],
-        fill: '#ef4444', // red-500
-      },
-      {
-        name: 'Mão de Obra',
-        kws: ['mão de obra', 'mao de obra', 'terceirizad'],
-        fill: '#10b981', // emerald-500
-      },
-      {
-        name: 'Insumos',
-        kws: [
-          'insumo',
-          'matéria-prima',
-          'materia-prima',
-          'embalagem',
-          'rótulo',
-          'rotulo',
-          'rolha',
-          'garrafa',
-          'levedura',
-          'barrica',
-          'caixa',
-        ],
-        fill: '#f97316', // orange-500
-      },
+      { name: 'Despesas com Pessoal', value: detailedExpenses.pessoal, fill: '#3b82f6' },
+      { name: 'Despesas Financeiras', value: detailedExpenses.financeira, fill: '#f59e0b' },
+      { name: 'Despesas/Custos Gerais', value: detailedExpenses.gerais, fill: '#8b5cf6' },
+      { name: 'Impostos e Tributos', value: detailedExpenses.impostos, fill: '#ef4444' },
+      { name: 'Mão de Obra', value: detailedExpenses.maoDeObra, fill: '#10b981' },
+      { name: 'Insumos', value: detailedExpenses.insumos, fill: '#f97316' },
       {
         name: 'Operação - Prestação de Serviços',
-        kws: [
-          'prestação de serviço',
-          'prestacao de servico',
-          'serviços prestados',
-          'servicos prestados',
-          'operação',
-          'operacao',
-          'logística',
-          'frete',
-        ],
-        fill: '#06b6d4', // cyan-500
+        value: detailedExpenses.operacao,
+        fill: '#06b6d4',
       },
-      {
-        name: 'Ferramentas e Utensílios',
-        kws: ['ferramenta', 'utensílio', 'utensilio', 'equipamento', 'peça'],
-        fill: '#64748b', // slate-500
-      },
-      {
-        name: 'Publicidade',
-        kws: [
-          'publicidade',
-          'marketing',
-          'propaganda',
-          'anúncio',
-          'anuncio',
-          'evento',
-          'comercial',
-          'rede social',
-          'patrocínio',
-        ],
-        fill: '#ec4899', // pink-500
-      },
+      { name: 'Ferramentas e Utensílios', value: detailedExpenses.ferramentas, fill: '#64748b' },
+      { name: 'Publicidade', value: detailedExpenses.publicidade, fill: '#ec4899' },
     ]
 
-    const results = categories.map((c) => ({
-      name: c.name,
-      value: findDetailedVal(c.kws),
-      fill: c.fill,
-    }))
-
-    const totalCat = results.reduce((acc, curr) => acc + curr.value, 0)
+    const totalCat = categories.reduce((acc, curr) => acc + curr.value, 0)
 
     if (totalCat === 0) return []
 
-    return results
+    return categories
       .filter((r) => r.value > 0)
       .map((r) => ({
         ...r,
         percent: (r.value / totalCat) * 100,
       }))
       .sort((a, b) => b.value - a.value)
-  }, [currUpload, linhas])
+  }, [detailedExpenses])
 
   const waterfallData = useMemo(() => {
-    if (!categorizedValues) return []
+    if (!categorizedValues || !detailedExpenses) return []
 
-    const { recTotal, despFin, despGer, despOp } = categorizedValues
+    const { recTotal } = categorizedValues
 
-    const y0 = recTotal
-    const y1 = y0 - despFin
-    const y2 = y1 - despGer
-    const y3 = y2 - despOp
+    let currentY = recTotal
+    const steps = []
 
-    return [
+    steps.push({
+      name: 'Receita Total',
+      fullName: 'Receita Total',
+      range: [0, currentY] as [number, number],
+      value: currentY,
+      isTotal: true,
+      fill: '#10b981',
+    })
+
+    const cats = [
+      { key: 'pessoal', name: 'Pessoal', fullName: 'Despesas com Pessoal', fill: '#3b82f6' },
+      { key: 'financeira', name: 'Financeiras', fullName: 'Despesas Financeiras', fill: '#f59e0b' },
+      { key: 'gerais', name: 'Gerais', fullName: 'Despesas/Custos Gerais', fill: '#8b5cf6' },
+      { key: 'impostos', name: 'Impostos', fullName: 'Impostos e Tributos', fill: '#ef4444' },
+      { key: 'maoDeObra', name: 'Mão de Obra', fullName: 'Mão de Obra', fill: '#10b981' },
+      { key: 'insumos', name: 'Insumos', fullName: 'Insumos', fill: '#f97316' },
+      { key: 'operacao', name: 'Operação', fullName: 'Operação - Prest. Serv.', fill: '#06b6d4' },
       {
-        name: 'Receita Total',
-        range: [0, y0] as [number, number],
-        value: y0,
-        isTotal: true,
-        fill: '#10b981',
+        key: 'ferramentas',
+        name: 'Ferram.',
+        fullName: 'Ferramentas e Utensílios',
+        fill: '#64748b',
       },
-      {
-        name: 'Desp. Financeiras',
-        range: [Math.min(y1, y0), Math.max(y1, y0)] as [number, number],
-        value: -despFin,
-        fill: '#e11d48',
-      },
-      {
-        name: 'Desp. Gerais',
-        range: [Math.min(y2, y1), Math.max(y2, y1)] as [number, number],
-        value: -despGer,
-        fill: '#f43f5e',
-      },
-      {
-        name: 'Desp. Operacionais',
-        range: [Math.min(y3, y2), Math.max(y3, y2)] as [number, number],
-        value: -despOp,
-        fill: '#fb7185',
-      },
-      {
-        name: 'Saldo Final',
-        range: [Math.min(0, y3), Math.max(0, y3)] as [number, number],
-        value: y3,
-        isTotal: true,
-        fill: y3 >= 0 ? '#3b82f6' : '#ef4444',
-      },
+      { key: 'publicidade', name: 'Publicidade', fullName: 'Publicidade', fill: '#ec4899' },
     ]
-  }, [categorizedValues])
+
+    cats.forEach((c) => {
+      const val = detailedExpenses[c.key as keyof Omit<typeof detailedExpenses, 'totalScaled'>]
+      if (typeof val === 'number' && val > 0) {
+        const nextY = currentY - val
+        steps.push({
+          name: c.name,
+          fullName: c.fullName,
+          range: [Math.min(nextY, currentY), Math.max(nextY, currentY)] as [number, number],
+          value: -val,
+          fill: c.fill,
+        })
+        currentY = nextY
+      }
+    })
+
+    steps.push({
+      name: 'Saldo Final',
+      fullName: 'Saldo Final',
+      range: [Math.min(0, currentY), Math.max(0, currentY)] as [number, number],
+      value: currentY,
+      isTotal: true,
+      fill: currentY >= 0 ? '#3b82f6' : '#ef4444',
+    })
+
+    return steps
+  }, [categorizedValues, detailedExpenses])
 
   const heatmapData = useMemo(() => {
     if (!categorizedValues) return []

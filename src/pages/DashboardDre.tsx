@@ -10,6 +10,7 @@ import { TrendingUp, ListTree, Loader2, DollarSign, Activity, PieChart, Target }
 import { WaterfallChart } from '@/components/dre/WaterfallChart'
 import { KpiCard } from '@/components/dre/KpiCard'
 import { RevenueExpenseChart } from '@/components/dre/RevenueExpenseChart'
+import { DistributionHeatmap } from '@/components/dre/DistributionHeatmap'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
 import {
@@ -201,32 +202,93 @@ export default function DashboardDre() {
         range: [0, y0] as [number, number],
         value: recTotal,
         isTotal: true,
-        fill: '#10b981', // emerald-500
+        fill: '#10b981',
       },
       {
         name: 'Desp. Financeiras',
         range: [Math.min(y1, y0), Math.max(y1, y0)] as [number, number],
         value: -despFinVal,
-        fill: '#e11d48', // rose-600
+        fill: '#e11d48',
       },
       {
         name: 'Desp. Gerais',
         range: [Math.min(y2, y1), Math.max(y2, y1)] as [number, number],
         value: -despGerVal,
-        fill: '#f43f5e', // rose-500
+        fill: '#f43f5e',
       },
       {
         name: 'Desp. Operacionais',
         range: [Math.min(y3, y2), Math.max(y3, y2)] as [number, number],
         value: -despOpVal,
-        fill: '#fb7185', // rose-400
+        fill: '#fb7185',
       },
       {
         name: 'Saldo Final',
         range: [Math.min(0, y3), Math.max(0, y3)] as [number, number],
         value: y3,
         isTotal: true,
-        fill: y3 >= 0 ? '#3b82f6' : '#ef4444', // blue-500 or red-500
+        fill: y3 >= 0 ? '#3b82f6' : '#ef4444',
+      },
+    ]
+  }, [currUpload, linhas])
+
+  const heatmapData = useMemo(() => {
+    if (!currUpload) return []
+
+    const recTotal = Number(currUpload.total_receita) || 0
+    const despTotal = Number(currUpload.total_despesa) || 0
+
+    let recFinVal = 0
+    let despFinVal = 0
+    let despOpVal = 0
+
+    if (linhas.length > 0) {
+      const findMax = (keyword: string, type: 'receita' | 'despesa') => {
+        const matches = linhas.filter(
+          (l) => l.descricao?.toLowerCase().includes(keyword.toLowerCase()) && Number(l[type]) > 0,
+        )
+        if (matches.length === 0) return 0
+        return Math.max(...matches.map((m) => Number(m[type]) || 0))
+      }
+
+      recFinVal = findMax('financeir', 'receita')
+      despFinVal = findMax('financeir', 'despesa')
+      despOpVal = findMax('operaciona', 'despesa')
+
+      if (despFinVal + despOpVal > despTotal) {
+        const scale = despTotal / (despFinVal + despOpVal)
+        despFinVal *= scale
+        despOpVal *= scale
+      }
+    } else {
+      // Mock progressivo caso não existam linhas detalhadas cadastradas
+      despFinVal = despTotal * 0.15
+      despOpVal = despTotal * 0.45
+      recFinVal = recTotal * 0.05
+    }
+
+    const despGerVal = Math.max(0, despTotal - despFinVal - despOpVal)
+
+    return [
+      {
+        name: 'Receitas Financeiras',
+        value: recFinVal,
+        percentage: recTotal > 0 ? (recFinVal / recTotal) * 100 : 0,
+      },
+      {
+        name: 'Despesas Financeiras',
+        value: despFinVal,
+        percentage: despTotal > 0 ? (despFinVal / despTotal) * 100 : 0,
+      },
+      {
+        name: 'Despesas Gerais',
+        value: despGerVal,
+        percentage: despTotal > 0 ? (despGerVal / despTotal) * 100 : 0,
+      },
+      {
+        name: 'Despesas Operacionais',
+        value: despOpVal,
+        percentage: despTotal > 0 ? (despOpVal / despTotal) * 100 : 0,
       },
     ]
   }, [currUpload, linhas])
@@ -238,6 +300,8 @@ export default function DashboardDre() {
       </div>
     )
   }
+
+  const currentPeriodLabel = `${month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'} ${year || 'N/A'}`
 
   return (
     <div className="-m-6 lg:-m-8 p-6 lg:p-8 bg-[#0f172a] min-h-[calc(100vh-4rem)] dark text-slate-50 flex flex-col space-y-6 animate-fade-in relative z-0">
@@ -280,10 +344,7 @@ export default function DashboardDre() {
         </div>
       </div>
 
-      <WaterfallChart
-        title={`Fluxo de Caixa (${month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'} ${year || 'N/A'})`}
-        data={waterfallData}
-      />
+      <WaterfallChart title={`Fluxo de Caixa (${currentPeriodLabel})`} data={waterfallData} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 relative z-10">
         <KpiCard
@@ -318,10 +379,11 @@ export default function DashboardDre() {
 
       {yearlyData.length > 0 && <RevenueExpenseChart data={yearlyData} year={year} />}
 
+      {currUpload && <DistributionHeatmap data={heatmapData} period={currentPeriodLabel} />}
+
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
         <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">
-          <ListTree className="w-6 h-6 text-blue-500" /> Detalhamento DRE (
-          {month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'}/{year || 'N/A'})
+          <ListTree className="w-6 h-6 text-blue-500" /> Detalhamento DRE ({currentPeriodLabel})
         </h2>
       </div>
 

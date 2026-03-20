@@ -15,21 +15,26 @@ Deno.serve(async (req: Request) => {
 
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
-      auth: { persistSession: false }
+      auth: { persistSession: false },
     })
 
     const token = authHeader.replace(/^Bearer\s+/i, '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token)
+
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
@@ -62,7 +67,8 @@ Deno.serve(async (req: Request) => {
       const code = String(row[0] || '').trim()
       const desc = String(row[1] || '').trim()
 
-      if (!code || code.toLowerCase().includes('total') || code.toLowerCase().includes('cód')) continue
+      if (!code || code.toLowerCase().includes('total') || code.toLowerCase().includes('cód'))
+        continue
 
       const rec = Number(row[11]) || 0
       const des = Number(row[12]) || 0
@@ -85,14 +91,29 @@ Deno.serve(async (req: Request) => {
     const { data: upload, error: uploadErr } = await supabase
       .from('dre_uploads')
       .insert({
-        nome_arquivo: file.name, periodo, ano, mes, trimestre,
-        total_receita, total_despesa, saldo: total_receita - total_despesa, user_id: user.id,
+        nome_arquivo: file.name,
+        periodo,
+        ano,
+        mes,
+        trimestre,
+        total_receita,
+        total_despesa,
+        saldo: total_receita - total_despesa,
+        user_id: user.id,
       })
-      .select().single()
+      .select()
+      .single()
 
     if (uploadErr) throw uploadErr
 
-    const linhas = rows.map((r) => ({ ...r, upload_id: upload.id, periodo, ano, mes, user_id: user.id }))
+    const linhas = rows.map((r) => ({
+      ...r,
+      upload_id: upload.id,
+      periodo,
+      ano,
+      mes,
+      user_id: user.id,
+    }))
     const { error: linhasErr } = await supabase.from('dre_linhas').insert(linhas)
     if (linhasErr) throw linhasErr
 
@@ -101,7 +122,8 @@ Deno.serve(async (req: Request) => {
     })
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })

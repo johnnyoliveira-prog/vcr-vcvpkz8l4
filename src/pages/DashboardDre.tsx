@@ -222,31 +222,167 @@ export default function DashboardDre() {
   }, [currUpload, categorizedValues])
 
   const expenseCompositionData = useMemo(() => {
-    if (!categorizedValues) return []
-    const { despTotal, despFin, despOp, despGer } = categorizedValues
-    if (despTotal === 0) return []
+    if (!currUpload || linhas.length === 0) return []
 
-    return [
+    const findDetailedVal = (kws: string[]) => {
+      const matches = linhas.filter(
+        (l) => kws.some((k) => l.descricao?.toLowerCase().includes(k)) && Number(l.despesa) > 0,
+      )
+      if (!matches.length) return 0
+
+      // Encontrar apenas os registros que não possuem "filhos" entre os matches,
+      // para evitar somar o valor sintético do grupo junto com o detalhado.
+      const roots = matches.filter((m) => {
+        if (!m.codigo) return true
+        const hasParentInMatches = matches.some(
+          (parent) =>
+            parent.codigo &&
+            m.codigo !== parent.codigo &&
+            m.codigo?.startsWith(parent.codigo + '.'),
+        )
+        return !hasParentInMatches
+      })
+
+      return roots.reduce((acc, curr) => acc + (Number(curr.despesa) || 0), 0)
+    }
+
+    const categories = [
       {
-        name: 'Financeiras',
-        value: despFin,
-        percent: (despFin / despTotal) * 100,
+        name: 'Despesas com Pessoal',
+        kws: [
+          'pessoal',
+          'salário',
+          'salario',
+          'férias',
+          'ferias',
+          '13º',
+          'décimo terceiro',
+          'encargo',
+          'pró-labore',
+          'pro labore',
+          'benefício',
+          'fgts',
+          'inss',
+        ],
+        fill: '#3b82f6', // blue-500
+      },
+      {
+        name: 'Despesas Financeiras',
+        kws: ['financeir', 'bancár', 'juros', 'tarifa', 'iof', 'multa'],
         fill: '#f59e0b', // amber-500
       },
       {
-        name: 'Gerais',
-        value: despGer,
-        percent: (despGer / despTotal) * 100,
+        name: 'Despesas/Custos Gerais',
+        kws: [
+          'geral',
+          'gerais',
+          'administrativ',
+          'adm',
+          'ocupação',
+          'honorário',
+          'manutenção',
+          'água',
+          'luz',
+          'telefone',
+          'aluguel',
+          'energia',
+          'internet',
+        ],
         fill: '#8b5cf6', // violet-500
       },
       {
-        name: 'Operacionais',
-        value: despOp,
-        percent: (despOp / despTotal) * 100,
+        name: 'Impostos e Tributos',
+        kws: [
+          'imposto',
+          'tributo',
+          'taxa',
+          'das',
+          'simples',
+          'icms',
+          'iss',
+          'pis',
+          'cofins',
+          'irpj',
+          'csll',
+        ],
+        fill: '#ef4444', // red-500
+      },
+      {
+        name: 'Mão de Obra',
+        kws: ['mão de obra', 'mao de obra', 'terceirizad'],
+        fill: '#10b981', // emerald-500
+      },
+      {
+        name: 'Insumos',
+        kws: [
+          'insumo',
+          'matéria-prima',
+          'materia-prima',
+          'embalagem',
+          'rótulo',
+          'rotulo',
+          'rolha',
+          'garrafa',
+          'levedura',
+          'barrica',
+          'caixa',
+        ],
+        fill: '#f97316', // orange-500
+      },
+      {
+        name: 'Operação - Prestação de Serviços',
+        kws: [
+          'prestação de serviço',
+          'prestacao de servico',
+          'serviços prestados',
+          'servicos prestados',
+          'operação',
+          'operacao',
+          'logística',
+          'frete',
+        ],
+        fill: '#06b6d4', // cyan-500
+      },
+      {
+        name: 'Ferramentas e Utensílios',
+        kws: ['ferramenta', 'utensílio', 'utensilio', 'equipamento', 'peça'],
+        fill: '#64748b', // slate-500
+      },
+      {
+        name: 'Publicidade',
+        kws: [
+          'publicidade',
+          'marketing',
+          'propaganda',
+          'anúncio',
+          'anuncio',
+          'evento',
+          'comercial',
+          'rede social',
+          'patrocínio',
+        ],
         fill: '#ec4899', // pink-500
       },
     ]
-  }, [categorizedValues])
+
+    const results = categories.map((c) => ({
+      name: c.name,
+      value: findDetailedVal(c.kws),
+      fill: c.fill,
+    }))
+
+    const totalCat = results.reduce((acc, curr) => acc + curr.value, 0)
+
+    if (totalCat === 0) return []
+
+    return results
+      .filter((r) => r.value > 0)
+      .map((r) => ({
+        ...r,
+        percent: (r.value / totalCat) * 100,
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [currUpload, linhas])
 
   const waterfallData = useMemo(() => {
     if (!categorizedValues) return []

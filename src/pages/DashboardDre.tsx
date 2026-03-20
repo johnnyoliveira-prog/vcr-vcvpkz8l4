@@ -408,14 +408,12 @@ export default function DashboardDre() {
 
   const heatmapData = useMemo(() => {
     if (!categorizedValues) return []
-    const { recTotal, despTotal, recFin, despFin, despGer, despOp } = categorizedValues
+    const { despTotal, despFin, despGer, despOp } = categorizedValues
 
     const despBasis = despTotal > 0 ? despTotal : 1
-    const recBasis = recTotal > 0 ? recTotal : 1
 
     if (!detailedExpenses) {
       return [
-        { name: 'Receitas financeiras', value: recFin, percentage: (recFin / recBasis) * 100 },
         { name: 'Despesas com Pessoal', value: 0, percentage: 0 },
         { name: 'Despesas financeiras', value: despFin, percentage: (despFin / despBasis) * 100 },
         { name: 'despesas/custos gerais', value: despGer, percentage: (despGer / despBasis) * 100 },
@@ -434,11 +432,6 @@ export default function DashboardDre() {
     }
 
     return [
-      {
-        name: 'Receitas financeiras',
-        value: recFin,
-        percentage: (recFin / recBasis) * 100,
-      },
       {
         name: 'Despesas com Pessoal',
         value: detailedExpenses.pessoal,

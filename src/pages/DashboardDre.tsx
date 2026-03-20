@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Select,
   SelectContent,
@@ -6,9 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { TrendingUp, CalendarDays, ListTree, Loader2 } from 'lucide-react'
+import { TrendingUp, ListTree, Loader2 } from 'lucide-react'
 import { SummaryCard } from '@/components/dre/SummaryCard'
-import { ComparisonChart } from '@/components/dre/ComparisonChart'
+import { WaterfallChart } from '@/components/dre/WaterfallChart'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
 import {
@@ -39,19 +39,6 @@ const MONTHS = [
   { v: '11', l: 'Novembro' },
   { v: '12', l: 'Dezembro' },
 ]
-
-const getQuarterInfo = (month: string) => {
-  if (!month) return { label: 'N/A', months: [] }
-  const q = Math.ceil(parseInt(month, 10) / 3)
-  return {
-    label: `T${q}`,
-    months: [
-      String((q - 1) * 3 + 1).padStart(2, '0'),
-      String((q - 1) * 3 + 2).padStart(2, '0'),
-      String(q * 3).padStart(2, '0'),
-    ],
-  }
-}
 
 const formatBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
@@ -141,45 +128,84 @@ export default function DashboardDre() {
   const prevYear = year ? String(parseInt(year) - 1) : ''
   const prevData = prevYear && month ? agg[prevYear]?.[month] || null : null
 
-  const chartYearKey = year || 'Atual'
-  const chartPrevYearKey = prevYear || 'Anterior'
+  const waterfallData = useMemo(() => {
+    if (!year || !month) return []
 
-  const chartData = [
-    { name: 'Receita', [chartYearKey]: currData?.rev || 0, [chartPrevYearKey]: prevData?.rev || 0 },
-    { name: 'Despesa', [chartYearKey]: currData?.exp || 0, [chartPrevYearKey]: prevData?.exp || 0 },
-  ]
-  const chartConfig = {
-    [chartYearKey]: { label: chartYearKey, color: '#3b82f6' },
-    [chartPrevYearKey]: { label: chartPrevYearKey, color: '#475569' },
-  }
+    const currUpload = uploads.find(
+      (u) => String(u.ano) === year && String(u.mes).padStart(2, '0') === month,
+    )
+    if (!currUpload) return []
 
-  const { label: qLabel, months: qMonths } = getQuarterInfo(month)
-  let qCurrRev = 0,
-    qCurrExp = 0,
-    qPrevRev = 0,
-    qPrevExp = 0,
-    hasQCurr = false,
-    hasQPrev = false
+    const recTotal = Number(currUpload.total_receita) || 0
+    const despTotal = Number(currUpload.total_despesa) || 0
+    const saldoFinal = Number(currUpload.saldo) || recTotal - despTotal
 
-  const qChartData = qMonths.map((m) => {
-    const cData = year ? agg[year]?.[m] : null
-    const pData = prevYear ? agg[prevYear]?.[m] : null
-    if (cData) {
-      qCurrRev += cData.rev
-      qCurrExp += cData.exp
-      hasQCurr = true
+    let despFinVal = 0
+    let despOpVal = 0
+
+    if (linhas.length > 0) {
+      const findMaxDespesa = (keyword: string) => {
+        const matches = linhas.filter(
+          (l) => l.descricao?.toLowerCase().includes(keyword.toLowerCase()) && l.despesa,
+        )
+        if (matches.length === 0) return 0
+        return Math.max(...matches.map((m) => Number(m.despesa) || 0))
+      }
+      despFinVal = findMaxDespesa('financeir')
+      despOpVal = findMaxDespesa('operaciona')
+
+      if (despFinVal + despOpVal > despTotal) {
+        const scale = despTotal / (despFinVal + despOpVal)
+        despFinVal *= scale
+        despOpVal *= scale
+      }
+    } else if (despTotal > 0) {
+      despFinVal = despTotal * 0.15
+      despOpVal = despTotal * 0.45
     }
-    if (pData) {
-      qPrevRev += pData.rev
-      qPrevExp += pData.exp
-      hasQPrev = true
-    }
-    return {
-      name: MONTHS.find((x) => x.v === m)?.l || m,
-      [chartYearKey]: cData ? cData.rev - cData.exp : 0,
-      [chartPrevYearKey]: pData ? pData.rev - pData.exp : 0,
-    }
-  })
+
+    const despGerVal = despTotal - despFinVal - despOpVal
+
+    const y0 = recTotal
+    const y1 = y0 - despFinVal
+    const y2 = y1 - despGerVal
+    const y3 = saldoFinal
+
+    return [
+      {
+        name: 'Receita Total',
+        range: [0, y0] as [number, number],
+        value: recTotal,
+        isTotal: true,
+        fill: '#10b981', // emerald-500
+      },
+      {
+        name: 'Desp. Financeiras',
+        range: [Math.min(y1, y0), Math.max(y1, y0)] as [number, number],
+        value: -despFinVal,
+        fill: '#e11d48', // rose-600
+      },
+      {
+        name: 'Desp. Gerais',
+        range: [Math.min(y2, y1), Math.max(y2, y1)] as [number, number],
+        value: -despGerVal,
+        fill: '#f43f5e', // rose-500
+      },
+      {
+        name: 'Desp. Operacionais',
+        range: [Math.min(y3, y2), Math.max(y3, y2)] as [number, number],
+        value: -despOpVal,
+        fill: '#fb7185', // rose-400
+      },
+      {
+        name: 'Saldo Final',
+        range: [Math.min(0, y3), Math.max(0, y3)] as [number, number],
+        value: y3,
+        isTotal: true,
+        fill: y3 >= 0 ? '#3b82f6' : '#ef4444', // blue-500 or red-500
+      },
+    ]
+  }, [year, month, uploads, linhas])
 
   if (loading) {
     return (
@@ -249,45 +275,9 @@ export default function DashboardDre() {
         />
       </div>
 
-      <ComparisonChart
-        title={`Comparativo Financeiro (${month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'})`}
-        data={chartData}
-        config={chartConfig}
-        year={chartYearKey}
-        prevYear={chartPrevYearKey}
-      />
-
-      <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
-        <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">
-          <CalendarDays className="w-6 h-6 text-blue-500" /> Comparativo Trimestral ({qLabel})
-        </h2>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10 mt-6">
-        <SummaryCard
-          title="Receita Total do Trimestre"
-          current={hasQCurr ? qCurrRev : null}
-          previous={hasQPrev ? qPrevRev : null}
-        />
-        <SummaryCard
-          title="Despesa Total do Trimestre"
-          current={hasQCurr ? qCurrExp : null}
-          previous={hasQPrev ? qPrevExp : null}
-          inverted
-        />
-        <SummaryCard
-          title="Saldo do Trimestre"
-          current={hasQCurr ? qCurrRev - qCurrExp : null}
-          previous={hasQPrev ? qPrevRev - qPrevExp : null}
-        />
-      </div>
-
-      <ComparisonChart
-        title={`Evolução do Saldo no Trimestre (${qLabel})`}
-        data={qChartData}
-        config={chartConfig}
-        year={chartYearKey}
-        prevYear={chartPrevYearKey}
+      <WaterfallChart
+        title={`Fluxo de Caixa (${month ? MONTHS.find((m) => m.v === month)?.l : 'N/A'} ${year || 'N/A'})`}
+        data={waterfallData}
       />
 
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">

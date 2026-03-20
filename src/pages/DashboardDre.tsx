@@ -21,18 +21,9 @@ import { RevenueExpenseChart } from '@/components/dre/RevenueExpenseChart'
 import { DistributionHeatmap } from '@/components/dre/DistributionHeatmap'
 import { ComboChart } from '@/components/dre/ComboChart'
 import { ExpenseCompositionChart } from '@/components/dre/ExpenseCompositionChart'
+import { HierarchicalTable } from '@/components/dre/HierarchicalTable'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 
 type DreUpload = Database['public']['Tables']['dre_uploads']['Row']
 type DreLinha = Database['public']['Tables']['dre_linhas']['Row']
@@ -496,81 +487,7 @@ export default function DashboardDre() {
         </h2>
       </div>
 
-      <div className="mt-6 relative z-10 bg-slate-900/50 border border-slate-800/80 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-slate-800/50">
-              <TableRow className="border-slate-800 hover:bg-transparent">
-                <TableHead className="text-slate-300 w-[120px]">Código</TableHead>
-                <TableHead className="text-slate-300">Descrição</TableHead>
-                <TableHead className="text-slate-300 text-right">Receita (R$)</TableHead>
-                <TableHead className="text-slate-300 text-right">Despesa (R$)</TableHead>
-                <TableHead className="text-slate-300 text-right">Saldo (R$)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loadingLinhas ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i} className="border-slate-800/50 hover:bg-transparent">
-                    <TableCell>
-                      <Skeleton className="h-4 w-16 bg-slate-800" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-48 bg-slate-800" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24 bg-slate-800 ml-auto" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24 bg-slate-800 ml-auto" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24 bg-slate-800 ml-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : linhas.length === 0 ? (
-                <TableRow className="hover:bg-transparent border-slate-800/50">
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                    Nenhum dado detalhado encontrado para este período.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                linhas.map((linha) => (
-                  <TableRow key={linha.id} className="border-slate-800/50 hover:bg-slate-800/30">
-                    <TableCell className="font-mono text-slate-400">{linha.codigo}</TableCell>
-                    <TableCell
-                      className={cn(
-                        'text-slate-200',
-                        linha.nivel === 1 && 'font-bold text-slate-100',
-                        linha.nivel === 2 && 'pl-4',
-                        linha.nivel === 3 && 'pl-8',
-                        linha.nivel === 4 && 'pl-12 text-slate-400',
-                      )}
-                    >
-                      {linha.descricao}
-                    </TableCell>
-                    <TableCell className="text-right text-emerald-400/90">
-                      {linha.receita ? formatBRL(linha.receita) : '-'}
-                    </TableCell>
-                    <TableCell className="text-right text-rose-400/90">
-                      {linha.despesa ? formatBRL(linha.despesa) : '-'}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        'text-right font-medium',
-                        (linha.saldo || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400',
-                      )}
-                    >
-                      {linha.saldo ? formatBRL(linha.saldo) : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <HierarchicalTable linhas={linhas} loading={loadingLinhas} />
     </div>
   )
 }

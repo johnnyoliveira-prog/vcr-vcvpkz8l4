@@ -410,29 +410,87 @@ export default function DashboardDre() {
     if (!categorizedValues) return []
     const { recTotal, despTotal, recFin, despFin, despGer, despOp } = categorizedValues
 
+    const despBasis = despTotal > 0 ? despTotal : 1
+    const recBasis = recTotal > 0 ? recTotal : 1
+
+    if (!detailedExpenses) {
+      return [
+        { name: 'Receitas financeiras', value: recFin, percentage: (recFin / recBasis) * 100 },
+        { name: 'Despesas com Pessoal', value: 0, percentage: 0 },
+        { name: 'Despesas financeiras', value: despFin, percentage: (despFin / despBasis) * 100 },
+        { name: 'despesas/custos gerais', value: despGer, percentage: (despGer / despBasis) * 100 },
+        { name: 'Impostos e Tributos', value: 0, percentage: 0 },
+        { name: 'Mão de Obra', value: 0, percentage: 0 },
+        { name: 'Insumos', value: 0, percentage: 0 },
+        { name: 'Operação - Prestação de Serviços', value: 0, percentage: 0 },
+        { name: 'Ferramentas e Utensílios', value: 0, percentage: 0 },
+        { name: 'Publicidade', value: 0, percentage: 0 },
+        {
+          name: 'Despesas/Custo Operacional',
+          value: despOp,
+          percentage: (despOp / despBasis) * 100,
+        },
+      ]
+    }
+
     return [
       {
-        name: 'Receitas Financeiras',
+        name: 'Receitas financeiras',
         value: recFin,
-        percentage: recTotal > 0 ? (recFin / recTotal) * 100 : 0,
+        percentage: (recFin / recBasis) * 100,
       },
       {
-        name: 'Despesas Financeiras',
-        value: despFin,
-        percentage: despTotal > 0 ? (despFin / despTotal) * 100 : 0,
+        name: 'Despesas com Pessoal',
+        value: detailedExpenses.pessoal,
+        percentage: (detailedExpenses.pessoal / despBasis) * 100,
       },
       {
-        name: 'Despesas Gerais',
-        value: despGer,
-        percentage: despTotal > 0 ? (despGer / despTotal) * 100 : 0,
+        name: 'Despesas financeiras',
+        value: detailedExpenses.financeira,
+        percentage: (detailedExpenses.financeira / despBasis) * 100,
       },
       {
-        name: 'Despesas Operacionais',
+        name: 'despesas/custos gerais',
+        value: detailedExpenses.gerais,
+        percentage: (detailedExpenses.gerais / despBasis) * 100,
+      },
+      {
+        name: 'Impostos e Tributos',
+        value: detailedExpenses.impostos,
+        percentage: (detailedExpenses.impostos / despBasis) * 100,
+      },
+      {
+        name: 'Mão de Obra',
+        value: detailedExpenses.maoDeObra,
+        percentage: (detailedExpenses.maoDeObra / despBasis) * 100,
+      },
+      {
+        name: 'Insumos',
+        value: detailedExpenses.insumos,
+        percentage: (detailedExpenses.insumos / despBasis) * 100,
+      },
+      {
+        name: 'Operação - Prestação de Serviços',
+        value: detailedExpenses.operacao,
+        percentage: (detailedExpenses.operacao / despBasis) * 100,
+      },
+      {
+        name: 'Ferramentas e Utensílios',
+        value: detailedExpenses.ferramentas,
+        percentage: (detailedExpenses.ferramentas / despBasis) * 100,
+      },
+      {
+        name: 'Publicidade',
+        value: detailedExpenses.publicidade,
+        percentage: (detailedExpenses.publicidade / despBasis) * 100,
+      },
+      {
+        name: 'Despesas/Custo Operacional',
         value: despOp,
-        percentage: despTotal > 0 ? (despOp / despTotal) * 100 : 0,
+        percentage: (despOp / despBasis) * 100,
       },
     ]
-  }, [categorizedValues])
+  }, [categorizedValues, detailedExpenses])
 
   const yearlyData = useMemo(() => {
     if (!year) return []

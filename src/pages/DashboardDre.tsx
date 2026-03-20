@@ -122,68 +122,205 @@ export default function DashboardDre() {
     return uploads.find((u) => String(u.ano) === year && String(u.mes).padStart(2, '0') === month)
   }, [uploads, year, month])
 
-  const kpiData = useMemo(() => {
+  const categorizedValues = useMemo(() => {
     if (!currUpload) return null
-    const receita = Number(currUpload.total_receita) || 0
-    const despesa = Number(currUpload.total_despesa) || 0
+
+    let recTotal = Number(currUpload.total_receita) || 0
+    let despTotal = Number(currUpload.total_despesa) || 0
+
+    if (linhas.length === 0) {
+      return {
+        recTotal,
+        despTotal,
+        despFin: despTotal * 0.15,
+        despOp: despTotal * 0.45,
+        despGer: despTotal * 0.4,
+        recFin: recTotal * 0.05,
+      }
+    }
+
+    const findVal = (type: 'despesa' | 'receita', kws: string[]) => {
+      const matches = linhas.filter(
+        (l) => kws.some((k) => l.descricao?.toLowerCase().includes(k)) && Number(l[type]) > 0,
+      )
+      return matches.length ? Math.max(...matches.map((m) => Number(m[type]) || 0)) : 0
+    }
+
+    let df = findVal('despesa', [
+      'financeir',
+      'bancár',
+      'juros',
+      'tarifa',
+      'iof',
+      'multa',
+      'encargo',
+    ])
+    let dop = findVal('despesa', [
+      'operaciona',
+      'venda',
+      'comercia',
+      'custo',
+      'cmv',
+      'cpv',
+      'csv',
+      'logística',
+      'frete',
+      'imposto',
+      'produção',
+    ])
+    let dg = findVal('despesa', [
+      'geral',
+      'gerais',
+      'administrativ',
+      'adm',
+      'pessoal',
+      'ocupação',
+      'honorário',
+      'manutenção',
+      'despesas diversas',
+    ])
+
+    const sum = df + dop + dg
+
+    if (despTotal > 0) {
+      if (sum > despTotal) {
+        const scale = despTotal / sum
+        df *= scale
+        dop *= scale
+        dg *= scale
+      } else if (sum < despTotal) {
+        const diff = despTotal - sum
+        dg += diff // Adiciona a diferença em Gerais (catch-all)
+      }
+    } else if (sum > 0) {
+      despTotal = sum
+    }
+
+    const rf = findVal('receita', ['financeir', 'juros', 'rendimento', 'aplicação', 'desconto'])
+
+    if (recTotal === 0 && rf > 0) {
+      recTotal = rf
+    }
+
+    return {
+      recTotal,
+      despTotal,
+      despFin: df,
+      despOp: dop,
+      despGer: dg,
+      recFin: rf,
+    }
+  }, [currUpload, linhas])
+
+  const kpiData = useMemo(() => {
+    if (!currUpload || !categorizedValues) return null
+    const receita = categorizedValues.recTotal
+    const despesa = categorizedValues.despTotal
     const saldo = Number(currUpload.saldo) || receita - despesa
     const cobertura = despesa > 0 ? receita / despesa : 0
     return { receita, despesa, saldo, cobertura }
-  }, [currUpload])
+  }, [currUpload, categorizedValues])
 
   const expenseCompositionData = useMemo(() => {
-    if (!currUpload) return []
-    const despTotal = Number(currUpload.total_despesa) || 0
+    if (!categorizedValues) return []
+    const { despTotal, despFin, despOp, despGer } = categorizedValues
     if (despTotal === 0) return []
-
-    let despFinVal = 0
-    let despOpVal = 0
-
-    if (linhas.length > 0) {
-      const findMaxDespesa = (keyword: string) => {
-        const matches = linhas.filter(
-          (l) =>
-            l.descricao?.toLowerCase().includes(keyword.toLowerCase()) && Number(l.despesa) > 0,
-        )
-        if (matches.length === 0) return 0
-        return Math.max(...matches.map((m) => Number(m.despesa) || 0))
-      }
-      despFinVal = findMaxDespesa('financeir')
-      despOpVal = findMaxDespesa('operaciona')
-
-      if (despFinVal + despOpVal > despTotal) {
-        const scale = despTotal / (despFinVal + despOpVal)
-        despFinVal *= scale
-        despOpVal *= scale
-      }
-    } else {
-      despFinVal = despTotal * 0.15
-      despOpVal = despTotal * 0.45
-    }
-
-    const despGerVal = Math.max(0, despTotal - despFinVal - despOpVal)
 
     return [
       {
         name: 'Financeiras',
-        value: despFinVal,
-        percent: (despFinVal / despTotal) * 100,
+        value: despFin,
+        percent: (despFin / despTotal) * 100,
         fill: '#f59e0b', // amber-500
       },
       {
         name: 'Gerais',
-        value: despGerVal,
-        percent: (despGerVal / despTotal) * 100,
+        value: despGer,
+        percent: (despGer / despTotal) * 100,
         fill: '#8b5cf6', // violet-500
       },
       {
         name: 'Operacionais',
-        value: despOpVal,
-        percent: (despOpVal / despTotal) * 100,
+        value: despOp,
+        percent: (despOp / despTotal) * 100,
         fill: '#ec4899', // pink-500
       },
     ]
-  }, [currUpload, linhas])
+  }, [categorizedValues])
+
+  const waterfallData = useMemo(() => {
+    if (!categorizedValues) return []
+
+    const { recTotal, despFin, despGer, despOp } = categorizedValues
+
+    const y0 = recTotal
+    const y1 = y0 - despFin
+    const y2 = y1 - despGer
+    const y3 = y2 - despOp
+
+    return [
+      {
+        name: 'Receita Total',
+        range: [0, y0] as [number, number],
+        value: y0,
+        isTotal: true,
+        fill: '#10b981',
+      },
+      {
+        name: 'Desp. Financeiras',
+        range: [Math.min(y1, y0), Math.max(y1, y0)] as [number, number],
+        value: -despFin,
+        fill: '#e11d48',
+      },
+      {
+        name: 'Desp. Gerais',
+        range: [Math.min(y2, y1), Math.max(y2, y1)] as [number, number],
+        value: -despGer,
+        fill: '#f43f5e',
+      },
+      {
+        name: 'Desp. Operacionais',
+        range: [Math.min(y3, y2), Math.max(y3, y2)] as [number, number],
+        value: -despOp,
+        fill: '#fb7185',
+      },
+      {
+        name: 'Saldo Final',
+        range: [Math.min(0, y3), Math.max(0, y3)] as [number, number],
+        value: y3,
+        isTotal: true,
+        fill: y3 >= 0 ? '#3b82f6' : '#ef4444',
+      },
+    ]
+  }, [categorizedValues])
+
+  const heatmapData = useMemo(() => {
+    if (!categorizedValues) return []
+    const { recTotal, despTotal, recFin, despFin, despGer, despOp } = categorizedValues
+
+    return [
+      {
+        name: 'Receitas Financeiras',
+        value: recFin,
+        percentage: recTotal > 0 ? (recFin / recTotal) * 100 : 0,
+      },
+      {
+        name: 'Despesas Financeiras',
+        value: despFin,
+        percentage: despTotal > 0 ? (despFin / despTotal) * 100 : 0,
+      },
+      {
+        name: 'Despesas Gerais',
+        value: despGer,
+        percentage: despTotal > 0 ? (despGer / despTotal) * 100 : 0,
+      },
+      {
+        name: 'Despesas Operacionais',
+        value: despOp,
+        percentage: despTotal > 0 ? (despOp / despTotal) * 100 : 0,
+      },
+    ]
+  }, [categorizedValues])
 
   const yearlyData = useMemo(() => {
     if (!year) return []
@@ -212,140 +349,6 @@ export default function DashboardDre() {
       despesa: grouped[m].despesa,
     }))
   }, [uploads, year])
-
-  const waterfallData = useMemo(() => {
-    if (!currUpload) return []
-
-    const recTotal = Number(currUpload.total_receita) || 0
-    const despTotal = Number(currUpload.total_despesa) || 0
-    const saldoFinal = Number(currUpload.saldo) || recTotal - despTotal
-
-    let despFinVal = 0
-    let despOpVal = 0
-
-    if (linhas.length > 0) {
-      const findMaxDespesa = (keyword: string) => {
-        const matches = linhas.filter(
-          (l) => l.descricao?.toLowerCase().includes(keyword.toLowerCase()) && l.despesa,
-        )
-        if (matches.length === 0) return 0
-        return Math.max(...matches.map((m) => Number(m.despesa) || 0))
-      }
-      despFinVal = findMaxDespesa('financeir')
-      despOpVal = findMaxDespesa('operaciona')
-
-      if (despFinVal + despOpVal > despTotal) {
-        const scale = despTotal / (despFinVal + despOpVal)
-        despFinVal *= scale
-        despOpVal *= scale
-      }
-    } else if (despTotal > 0) {
-      despFinVal = despTotal * 0.15
-      despOpVal = despTotal * 0.45
-    }
-
-    const despGerVal = despTotal - despFinVal - despOpVal
-
-    const y0 = recTotal
-    const y1 = y0 - despFinVal
-    const y2 = y1 - despGerVal
-    const y3 = saldoFinal
-
-    return [
-      {
-        name: 'Receita Total',
-        range: [0, y0] as [number, number],
-        value: recTotal,
-        isTotal: true,
-        fill: '#10b981',
-      },
-      {
-        name: 'Desp. Financeiras',
-        range: [Math.min(y1, y0), Math.max(y1, y0)] as [number, number],
-        value: -despFinVal,
-        fill: '#e11d48',
-      },
-      {
-        name: 'Desp. Gerais',
-        range: [Math.min(y2, y1), Math.max(y2, y1)] as [number, number],
-        value: -despGerVal,
-        fill: '#f43f5e',
-      },
-      {
-        name: 'Desp. Operacionais',
-        range: [Math.min(y3, y2), Math.max(y3, y2)] as [number, number],
-        value: -despOpVal,
-        fill: '#fb7185',
-      },
-      {
-        name: 'Saldo Final',
-        range: [Math.min(0, y3), Math.max(0, y3)] as [number, number],
-        value: y3,
-        isTotal: true,
-        fill: y3 >= 0 ? '#3b82f6' : '#ef4444',
-      },
-    ]
-  }, [currUpload, linhas])
-
-  const heatmapData = useMemo(() => {
-    if (!currUpload) return []
-
-    const recTotal = Number(currUpload.total_receita) || 0
-    const despTotal = Number(currUpload.total_despesa) || 0
-
-    let recFinVal = 0
-    let despFinVal = 0
-    let despOpVal = 0
-
-    if (linhas.length > 0) {
-      const findMax = (keyword: string, type: 'receita' | 'despesa') => {
-        const matches = linhas.filter(
-          (l) => l.descricao?.toLowerCase().includes(keyword.toLowerCase()) && Number(l[type]) > 0,
-        )
-        if (matches.length === 0) return 0
-        return Math.max(...matches.map((m) => Number(m[type]) || 0))
-      }
-
-      recFinVal = findMax('financeir', 'receita')
-      despFinVal = findMax('financeir', 'despesa')
-      despOpVal = findMax('operaciona', 'despesa')
-
-      if (despFinVal + despOpVal > despTotal) {
-        const scale = despTotal / (despFinVal + despOpVal)
-        despFinVal *= scale
-        despOpVal *= scale
-      }
-    } else {
-      despFinVal = despTotal * 0.15
-      despOpVal = despTotal * 0.45
-      recFinVal = recTotal * 0.05
-    }
-
-    const despGerVal = Math.max(0, despTotal - despFinVal - despOpVal)
-
-    return [
-      {
-        name: 'Receitas Financeiras',
-        value: recFinVal,
-        percentage: recTotal > 0 ? (recFinVal / recTotal) * 100 : 0,
-      },
-      {
-        name: 'Despesas Financeiras',
-        value: despFinVal,
-        percentage: despTotal > 0 ? (despFinVal / despTotal) * 100 : 0,
-      },
-      {
-        name: 'Despesas Gerais',
-        value: despGerVal,
-        percentage: despTotal > 0 ? (despGerVal / despTotal) * 100 : 0,
-      },
-      {
-        name: 'Despesas Operacionais',
-        value: despOpVal,
-        percentage: despTotal > 0 ? (despOpVal / despTotal) * 100 : 0,
-      },
-    ]
-  }, [currUpload, linhas])
 
   const comboChartData = useMemo(() => {
     if (uploads.length === 0) return []
@@ -473,7 +476,9 @@ export default function DashboardDre() {
         )}
       </div>
 
-      <WaterfallChart title={`Fluxo de Caixa (${currentPeriodLabel})`} data={waterfallData} />
+      {waterfallData.length > 0 && (
+        <WaterfallChart title={`Fluxo de Caixa (${currentPeriodLabel})`} data={waterfallData} />
+      )}
 
       {yearlyData.length > 0 && <RevenueExpenseChart data={yearlyData} year={year} />}
 

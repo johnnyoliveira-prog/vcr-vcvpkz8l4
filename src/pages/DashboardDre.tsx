@@ -11,6 +11,7 @@ import { WaterfallChart } from '@/components/dre/WaterfallChart'
 import { KpiCard } from '@/components/dre/KpiCard'
 import { RevenueExpenseChart } from '@/components/dre/RevenueExpenseChart'
 import { DistributionHeatmap } from '@/components/dre/DistributionHeatmap'
+import { ComboChart } from '@/components/dre/ComboChart'
 import { getDreUploads, getDreLinhas } from '@/services/dre'
 import type { Database } from '@/lib/supabase/types'
 import {
@@ -261,7 +262,6 @@ export default function DashboardDre() {
         despOpVal *= scale
       }
     } else {
-      // Mock progressivo caso não existam linhas detalhadas cadastradas
       despFinVal = despTotal * 0.15
       despOpVal = despTotal * 0.45
       recFinVal = recTotal * 0.05
@@ -292,6 +292,46 @@ export default function DashboardDre() {
       },
     ]
   }, [currUpload, linhas])
+
+  const comboChartData = useMemo(() => {
+    if (uploads.length === 0) return []
+
+    const grouped = uploads.reduce(
+      (acc, curr) => {
+        const key = `${curr.ano}-${String(curr.mes).padStart(2, '0')}`
+        if (!acc[key]) {
+          acc[key] = { key, ano: Number(curr.ano), mes: Number(curr.mes), receita: 0, saldo: 0 }
+        }
+        acc[key].receita += Number(curr.total_receita) || 0
+        acc[key].saldo +=
+          Number(curr.saldo) ||
+          (Number(curr.total_receita) || 0) - (Number(curr.total_despesa) || 0)
+        return acc
+      },
+      {} as Record<
+        string,
+        { key: string; ano: number; mes: number; receita: number; saldo: number }
+      >,
+    )
+
+    const sorted = Object.values(grouped).sort((a, b) => {
+      if (a.ano !== b.ano) return b.ano - a.ano
+      return b.mes - a.mes
+    })
+
+    const last6 = sorted.slice(0, 6).reverse()
+
+    return last6.map((item) => {
+      const monthLabel =
+        MONTHS.find((m) => Number(m.v) === String(item.mes).padStart(2, '0'))?.l.substring(0, 3) ||
+        String(item.mes)
+      return {
+        label: `${monthLabel}/${item.ano}`,
+        receita: item.receita,
+        saldo: item.saldo,
+      }
+    })
+  }, [uploads])
 
   if (loading) {
     return (
@@ -380,6 +420,8 @@ export default function DashboardDre() {
       {yearlyData.length > 0 && <RevenueExpenseChart data={yearlyData} year={year} />}
 
       {currUpload && <DistributionHeatmap data={heatmapData} period={currentPeriodLabel} />}
+
+      {comboChartData.length > 0 && <ComboChart data={comboChartData} />}
 
       <div className="mt-8 relative z-10 border-t border-slate-800/80 pt-8">
         <h2 className="text-2xl font-serif font-bold text-slate-50 flex items-center gap-2">

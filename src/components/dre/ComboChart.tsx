@@ -22,7 +22,7 @@ export function ComboChart({ data }: ComboChartProps) {
       <CardHeader className="border-b border-slate-800/50 bg-slate-900/30 pb-4">
         <CardTitle className="font-serif text-xl text-slate-200 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-emerald-500" />
-          Evolução Operacional (Últimos 6 Meses)
+          Evolução Operacional (Últimos 12 Meses)
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">

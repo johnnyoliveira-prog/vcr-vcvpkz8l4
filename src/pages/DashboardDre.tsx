@@ -539,9 +539,9 @@ export default function DashboardDre() {
       return b.mes - a.mes
     })
 
-    const last6 = sorted.slice(0, 6).reverse()
+    const last12 = sorted.slice(0, 12).reverse()
 
-    return last6.map((item) => {
+    return last12.map((item) => {
       const monthLabel =
         MONTHS.find((m) => Number(m.v) === String(item.mes).padStart(2, '0'))?.l.substring(0, 3) ||
         String(item.mes)

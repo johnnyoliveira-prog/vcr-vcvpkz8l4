@@ -1,5 +1,6 @@
 {
   "_versions": {
-    "processar-dre": 5
+    "processar-dre": 5,
+    "create-user": 1
   }
 }

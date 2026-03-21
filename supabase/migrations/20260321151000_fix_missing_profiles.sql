@@ -7,7 +7,7 @@ SELECT
   u.email, 
   COALESCE(u.raw_user_meta_data->>'name', split_part(u.email, '@', 1)),
   CASE WHEN u.email = 'johnnyoliveira@gmail.com' THEN 'admin' ELSE 'user' END,
-  CASE WHEN u.email = 'johnnyoliveira@gmail.com' THEN '{"*"}' ELSE '{"/"}' END
+  CASE WHEN u.email = 'johnnyoliveira@gmail.com' THEN ARRAY['*']::text[] ELSE ARRAY['/']::text[] END
 FROM auth.users u
 LEFT JOIN public.profiles p ON u.id = p.id
 WHERE p.id IS NULL

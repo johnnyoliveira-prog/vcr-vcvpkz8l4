@@ -4,17 +4,17 @@ import { Outlet } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { Loader2, LogOut, AlertTriangle } from 'lucide-react'
 
 export default function AuthGuard() {
-  const { user, profile, loading, signIn, signUp } = useAuth()
+  const { user, profile, loading, signIn, signUp, signOut } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [err, setErr] = useState('')
 
-  if (loading || (user && !profile)) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -22,10 +22,38 @@ export default function AuthGuard() {
     )
   }
 
+  // Se o usuário está autenticado mas o perfil não conseguiu carregar
+  if (user && !profile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
+        <Card className="w-full max-w-md text-center border-none shadow-elevation">
+          <CardHeader>
+            <div className="mx-auto bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-full w-fit mb-4">
+              <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
+            </div>
+            <CardTitle className="text-xl font-serif text-primary">
+              Configurando seu perfil...
+            </CardTitle>
+            <CardDescription className="mt-2 text-sm">
+              Estamos preparando o seu acesso. Se esta tela persistir por mais de alguns segundos,
+              tente atualizar a página ou entrar novamente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" className="w-full mt-2" onClick={() => signOut()}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair e tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md border-none shadow-elevation">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-serif text-primary">VCR Gestão</CardTitle>
             <CardDescription>Acesse sua conta para continuar</CardDescription>
@@ -76,7 +104,7 @@ export default function AuthGuard() {
                 <button
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline font-medium"
                 >
                   {isLogin ? 'Não tem uma conta? Crie aqui' : 'Já tem uma conta? Entre'}
                 </button>

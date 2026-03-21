@@ -37,11 +37,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let mounted = true
 
-    const fetchProfile = async (userId: string) => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-      if (mounted) {
-        setProfile(data)
-        setLoading(false)
+    const fetchProfile = async (userId: string, email?: string) => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle() // Use maybeSingle to prevent HTTP 406 Error when row is missing
+
+        if (error) {
+          console.error('Error fetching profile:', error)
+        }
+
+        if (data) {
+          if (mounted) {
+            setProfile(data as UserProfile)
+            setLoading(false)
+          }
+        } else if (email) {
+          // If profile is missing (due to trigger delay or missing old user), set a temporary local profile
+          const temporaryProfile: UserProfile = {
+            id: userId,
+            email: email,
+            name: email.split('@')[0],
+            role: email === 'johnnyoliveira@gmail.com' ? 'admin' : 'user',
+            allowed_routes: email === 'johnnyoliveira@gmail.com' ? ['*'] : ['/'],
+          }
+
+          if (mounted) {
+            setProfile(temporaryProfile)
+            setLoading(false)
+          }
+
+          // Attempt to insert it as a fallback
+          supabase.from('profiles').insert(temporaryProfile).then()
+        } else {
+          if (mounted) {
+            setLoading(false)
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error fetching profile:', err)
+        if (mounted) setLoading(false)
       }
     }
 
@@ -51,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchProfile(session.user.id, session.user.email)
       } else {
         setProfile(null)
         setLoading(false)
@@ -62,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        fetchProfile(session.user.id, session.user.email)
       } else {
         setProfile(null)
         setLoading(false)

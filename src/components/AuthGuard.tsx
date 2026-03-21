@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 
 export default function AuthGuard() {
-  const { user, loading, signIn, signUp } = useAuth()
+  const { user, profile, loading, signIn, signUp } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [err, setErr] = useState('')
 
-  if (loading) {
+  if (loading || (user && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

@@ -20,6 +20,7 @@ import SupportInbox from './pages/SupportInbox'
 import WhatsAppBot from './pages/WhatsAppBot'
 import ImportDre from './pages/ImportDre'
 import DashboardDre from './pages/DashboardDre'
+import UsersAdmin from './pages/UsersAdmin'
 
 import MemberLayout from './components/member/MemberLayout'
 import MemberPortal from './pages/member/Portal'
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/loyalty" element={<LoyaltyAdmin />} />
               <Route path="/support" element={<SupportInbox />} />
               <Route path="/bot" element={<WhatsAppBot />} />
+              <Route path="/users" element={<UsersAdmin />} />
             </Route>
 
             {/* Dedicated App Portal for Members */}

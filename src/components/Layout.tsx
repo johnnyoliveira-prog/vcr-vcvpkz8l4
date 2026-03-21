@@ -15,6 +15,8 @@ import {
   Bot,
   FileSpreadsheet,
   PieChart,
+  Shield,
+  ShieldAlert,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -39,6 +41,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { useAuth } from '@/hooks/use-auth'
 
 const items = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
@@ -53,10 +56,20 @@ const items = [
   { title: 'Fidelidade', url: '/loyalty', icon: Gift },
   { title: 'Suporte', url: '/support', icon: MessageCircle },
   { title: 'WhatsApp Bot', url: '/bot', icon: Bot },
+  { title: 'Usuários e Acessos', url: '/users', icon: Shield, adminOnly: true },
 ]
 
 function AppSidebar() {
   const location = useLocation()
+  const { profile } = useAuth()
+
+  const isAllowed = (url: string, adminOnly?: boolean) => {
+    if (adminOnly && profile?.role !== 'admin') return false
+    if (profile?.role === 'admin' || profile?.allowed_routes.includes('*')) return true
+    return profile?.allowed_routes.includes(url)
+  }
+
+  const visibleItems = items.filter((item) => isAllowed(item.url, item.adminOnly))
 
   return (
     <Sidebar variant="sidebar">
@@ -80,7 +93,7 @@ function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -104,6 +117,8 @@ function AppSidebar() {
 
 function Header() {
   const location = useLocation()
+  const { profile, signOut } = useAuth()
+
   const pathMap: Record<string, string> = {
     '/': 'Dashboard',
     '/crm': 'CRM (Leads)',
@@ -117,6 +132,7 @@ function Header() {
     '/loyalty': 'Programa de Fidelidade',
     '/support': 'Inbox de Suporte',
     '/bot': 'WhatsApp Bot',
+    '/users': 'Usuários e Acessos',
   }
   const currentPathName = pathMap[location.pathname] || 'Dashboard'
 
@@ -152,12 +168,14 @@ function Header() {
           <Bell className="h-5 w-5" />
           <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive" />
         </Button>
-        <Avatar className="h-9 w-9 border-2 border-secondary cursor-pointer hover:opacity-80 transition-opacity">
-          <AvatarImage
-            src="https://img.usecurling.com/ppl/thumbnail?gender=female&seed=2"
-            alt="@admin"
-          />
-          <AvatarFallback>AD</AvatarFallback>
+        <Avatar
+          className="h-9 w-9 border-2 border-secondary cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => signOut()}
+          title="Sair"
+        >
+          <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+            {profile?.name?.substring(0, 2).toUpperCase() || 'AD'}
+          </AvatarFallback>
         </Avatar>
       </div>
     </header>
@@ -165,6 +183,16 @@ function Header() {
 }
 
 export default function Layout() {
+  const { profile } = useAuth()
+  const location = useLocation()
+
+  const canAccess =
+    profile?.role === 'admin' ||
+    profile?.allowed_routes.includes('*') ||
+    profile?.allowed_routes.includes(location.pathname)
+  const isAdminRoute = location.pathname === '/users'
+  const finalAccess = isAdminRoute ? profile?.role === 'admin' : canAccess
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -172,7 +200,21 @@ export default function Layout() {
         <main className="flex-1 flex flex-col min-w-0">
           <Header />
           <div className="flex-1 p-6 lg:p-8 animate-fade-in overflow-auto">
-            <Outlet />
+            {!finalAccess ? (
+              <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+                <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+                <h1 className="text-2xl font-bold font-serif text-primary">Acesso Restrito</h1>
+                <p className="text-muted-foreground mt-2 max-w-md">
+                  Seu perfil atual ({profile?.role}) não possui permissão para visualizar esta
+                  página. Entre em contato com um administrador caso precise de acesso.
+                </p>
+                <Button asChild className="mt-6">
+                  <Link to="/">Voltar ao Início</Link>
+                </Button>
+              </div>
+            ) : (
+              <Outlet />
+            )}
           </div>
         </main>
       </div>

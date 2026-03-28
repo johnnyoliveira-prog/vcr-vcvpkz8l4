@@ -64,11 +64,24 @@ export default function AuthGuard() {
                 e.preventDefault()
                 setIsSubmitting(true)
                 setErr('')
-                const { error } = isLogin
-                  ? await signIn(email, password)
-                  : await signUp(email, password)
-                if (error) setErr(error.message)
-                setIsSubmitting(false)
+                try {
+                  const { error } = isLogin
+                    ? await signIn(email, password)
+                    : await signUp(email, password)
+                  if (error) {
+                    if (error.message === 'Invalid login credentials') {
+                      setErr(
+                        'E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.',
+                      )
+                    } else {
+                      setErr(error.message)
+                    }
+                  }
+                } catch (err: any) {
+                  setErr('Erro de conexão ao tentar fazer login. Tente novamente mais tarde.')
+                } finally {
+                  setIsSubmitting(false)
+                }
               }}
               className="space-y-4"
             >

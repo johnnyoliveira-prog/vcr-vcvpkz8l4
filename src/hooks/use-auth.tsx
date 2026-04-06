@@ -43,15 +43,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .from('profiles')
           .select('*')
           .eq('id', userId)
-          .maybeSingle() // Use maybeSingle to prevent HTTP 406 Error when row is missing
+          .limit(1)
 
         if (error) {
           console.error('Error fetching profile:', error)
         }
 
-        if (data) {
+        if (data && data.length > 0) {
           if (mounted) {
-            setProfile(data as UserProfile)
+            setProfile(data[0] as UserProfile)
             setLoading(false)
           }
         } else if (email) {

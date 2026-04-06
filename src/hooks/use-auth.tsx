@@ -95,16 +95,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id, session.user.email)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Error fetching session:', error)
+        }
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          if (session?.user) {
+            fetchProfile(session.user.id, session.user.email)
+          } else {
+            setProfile(null)
+            setLoading(false)
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Unhandled session fetch error:', error)
+        if (mounted) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+        }
+      })
 
     return () => {
       mounted = false

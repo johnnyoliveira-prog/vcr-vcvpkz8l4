@@ -1,10 +1,32 @@
 migrate(
   (app) => {
+    const getCol = (name) => {
+      const variations = [
+        name,
+        name.toLowerCase(),
+        name.toUpperCase(),
+        name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
+        name
+          .split('_')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join('_'),
+        name
+          .split('_')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(''),
+        name.replace(/_/g, ''),
+      ]
+      for (const v of variations) {
+        try {
+          return app.findCollectionByNameOrId(v)
+        } catch (_) {}
+      }
+      return null
+    }
+
     // profiles
-    let profiles
-    try {
-      profiles = app.findCollectionByNameOrId('profiles')
-    } catch (_) {
+    let profiles = getCol('profiles')
+    if (!profiles) {
       profiles = new Collection({
         name: 'profiles',
         type: 'base',
@@ -36,10 +58,8 @@ migrate(
     }
 
     // dre_uploads
-    let dre_uploads
-    try {
-      dre_uploads = app.findCollectionByNameOrId('dre_uploads')
-    } catch (_) {
+    let dre_uploads = getCol('dre_uploads')
+    if (!dre_uploads) {
       dre_uploads = new Collection({
         name: 'dre_uploads',
         type: 'base',
@@ -65,10 +85,8 @@ migrate(
     }
 
     // dre_linhas
-    let dre_linhas
-    try {
-      dre_linhas = app.findCollectionByNameOrId('dre_linhas')
-    } catch (_) {
+    let dre_linhas = getCol('dre_linhas')
+    if (!dre_linhas) {
       dre_linhas = new Collection({
         name: 'dre_linhas',
         type: 'base',
@@ -97,10 +115,8 @@ migrate(
     }
 
     // ala_private_membros
-    let ala_private_membros
-    try {
-      ala_private_membros = app.findCollectionByNameOrId('ala_private_membros')
-    } catch (_) {
+    let ala_private_membros = getCol('ala_private_membros')
+    if (!ala_private_membros) {
       ala_private_membros = new Collection({
         name: 'ala_private_membros',
         type: 'base',
@@ -137,20 +153,86 @@ migrate(
         }),
       )
       app.save(ala_private_membros)
+    } else {
+      // Check if titular_id exists
+      let saveNeeded = false
+      if (!ala_private_membros.fields.getByName('titular_id')) {
+        ala_private_membros.fields.add(
+          new RelationField({
+            name: 'titular_id',
+            collectionId: ala_private_membros.id,
+            maxSelect: 1,
+          }),
+        )
+        saveNeeded = true
+      }
+
+      if (!ala_private_membros.fields.getByName('tipo')) {
+        ala_private_membros.fields.add(
+          new SelectField({
+            name: 'tipo',
+            maxSelect: 1,
+            values: ['ALA PRIVATE', 'membro ALA', 'membro ALA PRIVATE WINE', 'Cônjuge', 'Filho'],
+          }),
+        )
+        saveNeeded = true
+      }
+      if (!ala_private_membros.fields.getByName('data_adesao')) {
+        ala_private_membros.fields.add(new TextField({ name: 'data_adesao' }))
+        saveNeeded = true
+      }
+      if (!ala_private_membros.fields.getByName('cargo')) {
+        ala_private_membros.fields.add(new TextField({ name: 'cargo' }))
+        saveNeeded = true
+      }
+      if (saveNeeded) {
+        app.save(ala_private_membros)
+      }
     }
   },
   (app) => {
+    const getCol = (name) => {
+      const variations = [
+        name,
+        name.toLowerCase(),
+        name.toUpperCase(),
+        name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(),
+        name
+          .split('_')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join('_'),
+        name
+          .split('_')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(''),
+        name.replace(/_/g, ''),
+      ]
+      for (const v of variations) {
+        try {
+          return app.findCollectionByNameOrId(v)
+        } catch (_) {}
+      }
+      return null
+    }
+
     try {
-      app.delete(app.findCollectionByNameOrId('ala_private_membros'))
+      const c1 = getCol('ala_private_membros')
+      if (c1) app.delete(c1)
     } catch (_) {}
+
     try {
-      app.delete(app.findCollectionByNameOrId('dre_linhas'))
+      const c2 = getCol('dre_linhas')
+      if (c2) app.delete(c2)
     } catch (_) {}
+
     try {
-      app.delete(app.findCollectionByNameOrId('dre_uploads'))
+      const c3 = getCol('dre_uploads')
+      if (c3) app.delete(c3)
     } catch (_) {}
+
     try {
-      app.delete(app.findCollectionByNameOrId('profiles'))
+      const c4 = getCol('profiles')
+      if (c4) app.delete(c4)
     } catch (_) {}
   },
 )

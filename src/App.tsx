@@ -4,7 +4,7 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 import { AuthProvider } from './hooks/use-auth'
-import AuthGuard from './components/AuthGuard'
+import { AuthGuard } from './components/AuthGuard'
 
 import Layout from './components/Layout'
 import Index from './pages/Index'
@@ -21,6 +21,7 @@ import WhatsAppBot from './pages/WhatsAppBot'
 import ImportDre from './pages/ImportDre'
 import DashboardDre from './pages/DashboardDre'
 import UsersAdmin from './pages/UsersAdmin'
+import Login from './pages/Login'
 
 import MemberLayout from './components/member/MemberLayout'
 import MemberPortal from './pages/member/Portal'
@@ -32,6 +33,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route element={<AuthGuard />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />

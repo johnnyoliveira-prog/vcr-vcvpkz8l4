@@ -145,14 +145,15 @@ migrate(
       })
       app.save(ala_private_membros)
 
-      ala_private_membros.fields.add(
+      const saved_ala = app.findCollectionByNameOrId('ala_private_membros')
+      saved_ala.fields.add(
         new RelationField({
           name: 'titular_id',
-          collectionId: ala_private_membros.id,
+          collectionId: saved_ala.id,
           maxSelect: 1,
         }),
       )
-      app.save(ala_private_membros)
+      app.save(saved_ala)
     } else {
       // Check if titular_id exists
       let saveNeeded = false

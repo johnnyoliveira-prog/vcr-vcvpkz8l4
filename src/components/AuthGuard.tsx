@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2, LogOut, AlertTriangle } from 'lucide-react'
+import { extractFieldErrors, getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function AuthGuard() {
   const { user, profile, loading, signIn, signUp, signOut } = useAuth()
@@ -13,6 +14,7 @@ export default function AuthGuard() {
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [err, setErr] = useState('')
+  const [fieldErrs, setFieldErrs] = useState<Record<string, string>>({})
 
   if (loading) {
     return (
@@ -22,7 +24,6 @@ export default function AuthGuard() {
     )
   }
 
-  // Se o usuário está autenticado mas o perfil não conseguiu carregar
   if (user && !profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-4">
@@ -64,20 +65,22 @@ export default function AuthGuard() {
                 e.preventDefault()
                 setIsSubmitting(true)
                 setErr('')
+                setFieldErrs({})
                 try {
                   const { error } = isLogin
                     ? await signIn(email, password)
                     : await signUp(email, password)
                   if (error) {
-                    if (error.message === 'Invalid login credentials') {
+                    if (error.status === 400) {
                       setErr(
                         'E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.',
                       )
+                      setFieldErrs(extractFieldErrors(error))
                     } else {
-                      setErr(error.message)
+                      setErr(getErrorMessage(error))
                     }
                   }
-                } catch (err: any) {
+                } catch (error: any) {
                   setErr('Erro de conexão ao tentar fazer login. Tente novamente mais tarde.')
                 } finally {
                   setIsSubmitting(false)
@@ -99,6 +102,7 @@ export default function AuthGuard() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
                 />
+                {fieldErrs.email && <p className="text-xs text-red-500">{fieldErrs.email}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Senha</label>
@@ -108,6 +112,7 @@ export default function AuthGuard() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                {fieldErrs.password && <p className="text-xs text-red-500">{fieldErrs.password}</p>}
               </div>
               <Button className="w-full" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}

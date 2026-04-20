@@ -22,11 +22,7 @@ import { DistributionHeatmap } from '@/components/dre/DistributionHeatmap'
 import { ComboChart } from '@/components/dre/ComboChart'
 import { ExpenseCompositionChart } from '@/components/dre/ExpenseCompositionChart'
 import { HierarchicalTable } from '@/components/dre/HierarchicalTable'
-import { getDreUploads, getDreLinhas } from '@/services/dre'
-import type { Database } from '@/lib/supabase/types'
-
-type DreUpload = Database['public']['Tables']['dre_uploads']['Row']
-type DreLinha = Database['public']['Tables']['dre_linhas']['Row']
+import { getDreUploads, getDreLinhas, type DreUpload, type DreLinha } from '@/services/dre'
 
 const MONTHS = [
   { v: '01', l: 'Janeiro' },

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client'
+import pb from '@/lib/pocketbase/client'
 
 export interface AlaPrivateMember {
   id: string
@@ -11,49 +11,35 @@ export interface AlaPrivateMember {
   titular_id: string | null
   data_adesao: string
   created_at: string
+  created: string
 }
 
 export const getMembers = async () => {
-  const { data, error } = await supabase
-    .from('ala_private_membros')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data as AlaPrivateMember[]
+  const data = await pb.collection('ala_private_membros').getFullList({ sort: '-created' })
+  return data.map((d: any) => ({ ...d, created_at: d.created })) as AlaPrivateMember[]
 }
 
 export const createMember = async (
-  member: Omit<AlaPrivateMember, 'id' | 'user_id' | 'created_at' | 'data_adesao'>,
+  member: Omit<AlaPrivateMember, 'id' | 'user_id' | 'created_at' | 'created' | 'data_adesao'>,
 ) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = pb.authStore.record
   if (!user) throw new Error('User not authenticated')
 
-  const { data, error } = await supabase
-    .from('ala_private_membros')
-    .insert([{ ...member, user_id: user.id }])
-    .select()
-    .single()
+  const dataToInsert = {
+    ...member,
+    user_id: user.id,
+    data_adesao: new Date().toISOString(),
+  }
 
-  if (error) throw error
-  return data as AlaPrivateMember
+  const result: any = await pb.collection('ala_private_membros').create(dataToInsert)
+  return { ...result, created_at: result.created } as AlaPrivateMember
 }
 
 export const updateMember = async (id: string, member: Partial<AlaPrivateMember>) => {
-  const { data, error } = await supabase
-    .from('ala_private_membros')
-    .update(member)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data as AlaPrivateMember
+  const result: any = await pb.collection('ala_private_membros').update(id, member)
+  return { ...result, created_at: result.created } as AlaPrivateMember
 }
 
 export const deleteMember = async (id: string) => {
-  const { error } = await supabase.from('ala_private_membros').delete().eq('id', id)
-  if (error) throw error
+  await pb.collection('ala_private_membros').delete(id)
 }

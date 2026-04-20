@@ -1,43 +1,32 @@
-import { supabase } from '@/lib/supabase/client'
+import pb from '@/lib/pocketbase/client'
 import { type UserProfile } from '@/hooks/use-auth'
 
 export const getProfiles = async () => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
-  return data as UserProfile[]
+  return pb.collection('profiles').getFullList({ sort: '-created' }) as Promise<UserProfile[]>
 }
 
 export const updateUserAccess = async (userId: string, role: string, routes: string[]) => {
-  const { error } = await supabase.rpc('update_user_access', {
-    target_user_id: userId,
-    new_role: role,
-    new_routes: routes,
-  })
-  if (error) throw error
+  const profiles = await pb.collection('profiles').getFullList({ filter: `user="${userId}"` })
+  if (profiles.length > 0) {
+    await pb.collection('profiles').update(profiles[0].id, { role, allowed_routes: routes })
+  }
 }
 
 export const createUser = async (payload: any) => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session?.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+  const user = await pb.collection('users').create({
+    email: payload.email,
+    password: payload.password,
+    passwordConfirm: payload.password,
+    name: payload.name,
   })
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}))
-    throw new Error(errorData.error || 'Erro ao criar usuário')
-  }
+  await pb.collection('profiles').create({
+    user: user.id,
+    email: payload.email,
+    name: payload.name,
+    role: payload.role || 'user',
+    allowed_routes: payload.allowed_routes || ['/'],
+  })
 
-  return res.json()
+  return user
 }

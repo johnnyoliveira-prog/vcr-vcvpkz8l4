@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react'
 import { FileSpreadsheet } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
-import { getDreUploads, deleteDreUpload } from '@/services/dre'
-import type { Database } from '@/lib/supabase/types'
+import { getDreUploads, deleteDreUpload, type DreUpload } from '@/services/dre'
 import { DreUploadZone } from '@/components/dre/DreUploadZone'
 import { DreHistoryTable } from '@/components/dre/DreHistoryTable'
-
-type DreUpload = Database['public']['Tables']['dre_uploads']['Row']
 
 export default function ImportDre() {
   const [history, setHistory] = useState<DreUpload[]>([])

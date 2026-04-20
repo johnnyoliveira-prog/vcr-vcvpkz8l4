@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase/client'
+import pb from '@/lib/pocketbase/client'
 
 export interface UserProfile {
   id: string
@@ -11,8 +10,8 @@ export interface UserProfile {
 }
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: any
+  session: any
   profile: UserProfile | null
   signUp: (email: string, password: string) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
@@ -29,120 +28,97 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<any>(pb.authStore.record)
+  const [session, setSession] = useState<any>(
+    pb.authStore.isValid ? { user: pb.authStore.record } : null,
+  )
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
 
-    const fetchProfile = async (userId: string, email?: string) => {
+    const fetchProfile = async (record: any) => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .limit(1)
-
-        if (error) {
-          console.error('Error fetching profile:', error)
-        }
-
-        if (data && data.length > 0) {
-          if (mounted) {
-            setProfile(data[0] as UserProfile)
-            setLoading(false)
-          }
-        } else if (email) {
-          // If profile is missing (due to trigger delay or missing old user), set a temporary local profile
-          const temporaryProfile: UserProfile = {
-            id: userId,
-            email: email,
-            name: email.split('@')[0],
-            role: email === 'johnnyoliveira@gmail.com' ? 'admin' : 'user',
-            allowed_routes: email === 'johnnyoliveira@gmail.com' ? ['*'] : ['/'],
-          }
-
-          if (mounted) {
-            setProfile(temporaryProfile)
-            setLoading(false)
-          }
-
-          // Attempt to insert it as a fallback
-          supabase.from('profiles').insert(temporaryProfile).then()
+        const profiles = await pb
+          .collection('profiles')
+          .getFullList({ filter: `user="${record.id}"` })
+        if (profiles.length > 0) {
+          if (mounted) setProfile(profiles[0] as unknown as UserProfile)
         } else {
-          if (mounted) {
-            setLoading(false)
+          const temp: UserProfile = {
+            id: record.id,
+            email: record.email,
+            name: record.email.split('@')[0],
+            role: record.email === 'johnnyoliveira@gmail.com' ? 'admin' : 'user',
+            allowed_routes: record.email === 'johnnyoliveira@gmail.com' ? ['*'] : ['/'],
           }
+          if (mounted) setProfile(temp)
+          try {
+            await pb.collection('profiles').create({
+              user: record.id,
+              email: temp.email,
+              name: temp.name,
+              role: temp.role,
+              allowed_routes: temp.allowed_routes,
+            })
+          } catch (e) {}
         }
       } catch (err) {
-        console.error('Unexpected error fetching profile:', err)
+        console.error(err)
+      } finally {
         if (mounted) setLoading(false)
       }
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id, session.user.email)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
+    if (pb.authStore.record) {
+      fetchProfile(pb.authStore.record)
+    } else {
+      setLoading(false)
+    }
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session }, error }) => {
-        if (error) {
-          console.error('Error fetching session:', error)
-        }
-        if (mounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          if (session?.user) {
-            fetchProfile(session.user.id, session.user.email)
-          } else {
-            setProfile(null)
-            setLoading(false)
-          }
-        }
-      })
-      .catch((error) => {
-        console.error('Unhandled session fetch error:', error)
-        if (mounted) {
-          setSession(null)
-          setUser(null)
+    const unsubscribe = pb.authStore.onChange((token, record) => {
+      if (mounted) {
+        setUser(record)
+        setSession(record ? { user: record } : null)
+        if (record) {
+          setLoading(true)
+          fetchProfile(record)
+        } else {
           setProfile(null)
           setLoading(false)
         }
-      })
+      }
+    })
 
     return () => {
       mounted = false
-      subscription.unsubscribe()
+      unsubscribe()
     }
   }, [])
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
-    })
-    return { error }
+    try {
+      await pb.collection('users').create({ email, password, passwordConfirm: password })
+      await pb.collection('users').authWithPassword(email, password)
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
   }
+
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+    try {
+      await pb.collection('users').authWithPassword(email, password)
+      return { error: null }
+    } catch (error) {
+      return { error }
+    }
   }
+
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    pb.authStore.clear()
+    return { error: null }
   }
 
   return (

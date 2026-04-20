@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Search, Crown, Plus, AlertCircle } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import {
   getMembers,
   createMember,
@@ -54,6 +55,10 @@ export default function AlaPrivate() {
   useEffect(() => {
     loadMembers()
   }, [])
+
+  useRealtime('ala_private_membros', () => {
+    loadMembers()
+  })
 
   const handleSave = async (data: MemberFormValues) => {
     setIsSaving(true)

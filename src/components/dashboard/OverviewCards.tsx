@@ -1,34 +1,101 @@
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DollarSign, Users, Target, Truck } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
+import { getDreUploads } from '@/services/dre'
+import { useRealtime } from '@/hooks/use-realtime'
 
 export function OverviewCards() {
-  const data = [
-    { title: 'Receita Total', value: 'R$ 1.2M', sub: '+12% este mês', icon: DollarSign },
-    { title: 'Membros Ativos', value: '450', sub: '+8 novos membros', icon: Users },
-    { title: 'Novos Leads (Mês)', value: '64', sub: '24% conversão', icon: Target },
-    { title: 'Envios Pendentes', value: '12', sub: 'Lote de Novembro', icon: Truck },
-  ]
+  const [metrics, setMetrics] = useState({ receita: 0, despesa: 0, saldo: 0 })
+  const [loading, setLoading] = useState(true)
+
+  const loadMetrics = async () => {
+    try {
+      const uploads = await getDreUploads()
+      const totals = uploads.reduce(
+        (acc, curr) => {
+          acc.receita += curr.total_receita || 0
+          acc.despesa += curr.total_despesa || 0
+          acc.saldo += curr.saldo || 0
+          return acc
+        },
+        { receita: 0, despesa: 0, saldo: 0 },
+      )
+      setMetrics(totals)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadMetrics()
+  }, [])
+
+  useRealtime('dre_uploads', () => {
+    loadMetrics()
+  })
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground invisible">
+                Loading
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-7 bg-muted rounded w-1/2"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {data.map((item, i) => (
-        <Card
-          key={i}
-          className="hover:shadow-elevation transition-all animate-fade-in-up"
-          style={{ animationDelay: `${i * 100}ms` }}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {item.title}
-            </CardTitle>
-            <item.icon className="h-4 w-4 text-secondary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-serif text-primary">{item.value}</div>
-            <p className="text-xs text-muted-foreground mt-1">{item.sub}</p>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="grid gap-4 md:grid-cols-3">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Receita</CardTitle>
+          <TrendingUp className="h-4 w-4 text-green-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              metrics.receita,
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Total Despesa</CardTitle>
+          <TrendingDown className="h-4 w-4 text-red-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              metrics.despesa,
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Saldo</CardTitle>
+          <DollarSign className="h-4 w-4 text-primary" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+              metrics.saldo,
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileSpreadsheet } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import { getDreUploads, deleteDreUpload, type DreUpload } from '@/services/dre'
 import { DreUploadZone } from '@/components/dre/DreUploadZone'
 import { DreHistoryTable } from '@/components/dre/DreHistoryTable'
@@ -24,6 +25,10 @@ export default function ImportDre() {
   useEffect(() => {
     fetchHistory()
   }, [])
+
+  useRealtime('dre_uploads', () => {
+    fetchHistory()
+  })
 
   const handleDelete = async (id: string) => {
     try {

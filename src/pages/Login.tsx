@@ -39,26 +39,56 @@ export default function Login() {
     e.preventDefault()
     setIsLoading(true)
 
-    const { error } = await signIn(email, password)
+    try {
+      const timeoutPromise = new Promise<{ error: any }>((resolve) =>
+        setTimeout(() => resolve({ error: new Error('Timeout') }), 10000),
+      )
 
-    setIsLoading(false)
+      const authPromise = signIn(email, password)
 
-    if (error) {
+      const { error } = await Promise.race([authPromise, timeoutPromise])
+
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao entrar',
+          description:
+            'Erro ao entrar. Por favor, verifique suas credenciais ou tente novamente em instantes.',
+        })
+        setIsLoading(false)
+        return
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Login realizado com sucesso. Redirecionando...',
+      })
+
+      setTimeout(() => {
+        navigate('/')
+      }, 300)
+    } catch (err) {
       toast({
         variant: 'destructive',
         title: 'Erro ao entrar',
         description:
-          'E-mail ou senha incorretos. Por favor, verifique suas credenciais e tente novamente.',
+          'Erro ao entrar. Por favor, verifique suas credenciais ou tente novamente em instantes.',
       })
-      return
+      setIsLoading(false)
     }
-
-    navigate('/')
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md shadow-lg border-none animate-fade-in-up">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4 relative">
+      {isLoading && (
+        <div className="absolute inset-0 z-50 bg-background/50 flex items-center justify-center backdrop-blur-sm animate-fade-in">
+          <div className="flex flex-col items-center gap-3 p-6 bg-background rounded-lg shadow-xl border">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm font-medium">Autenticando...</p>
+          </div>
+        </div>
+      )}
+      <Card className="w-full max-w-md shadow-lg border-none animate-fade-in-up relative z-10">
         <CardHeader className="space-y-3 text-center pb-6">
           <div className="mx-auto bg-primary/10 w-16 h-16 flex items-center justify-center rounded-full mb-2">
             <Wine className="w-8 h-8 text-primary" />
@@ -96,9 +126,8 @@ export default function Login() {
               />
             </div>
             <Button className="w-full mt-6" type="submit" disabled={isLoading}>
-              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Entrar
-            </Button>
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
+            </Button>{' '}
           </form>
         </CardContent>
         <CardFooter className="flex justify-center text-sm text-muted-foreground pt-4 border-t">

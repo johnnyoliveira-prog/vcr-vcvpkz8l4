@@ -62,7 +62,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: temp.role,
               allowed_routes: temp.allowed_routes,
             })
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
         }
       } catch (err) {
         console.error(err)

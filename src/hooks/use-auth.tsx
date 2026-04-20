@@ -109,9 +109,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identity: string, password: string) => {
     try {
-      await pb.collection('users').authWithPassword(email, password)
+      await pb.collection('users').authWithPassword(identity, password)
       return { error: null }
     } catch (error) {
       return { error }
